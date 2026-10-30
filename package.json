@@ -1,0 +1,28 @@
+{
+  "name": "pkks",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3004",
+    "build": "next build",
+    "start": "next start -p 3004",
+    "migrate": "node scripts/migrate.mjs",
+    "buat-admin": "node scripts/buat-admin.mjs"
+  },
+  "dependencies": {
+    "next": "16.4.3",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "pg": "8.23.1",
+    "bcryptjs": "3.0.3"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "@types/node": "25.6.2",
+    "@types/react": "19.2.6",
+    "@types/react-dom": "19.2.6",
+    "@types/pg": "8.15.6",
+    "tailwindcss": "4.3.3",
+    "@tailwindcss/postcss": "4.3.3"
+  }
+}

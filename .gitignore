@@ -1,0 +1,38 @@
+# See https://github.com/github/gitignore/blob/main/Node.gitignore
+/node_modules
+/.pnp
+.pnpfile
+
+# dependency-based
+# Lockfile packages
+yarn.lock
+p-lock.yaml
+package-lock.json
+
+# Optional build artifacts
+# .next/
+out/
+
+# Optional debug files
+# .DS_Store
+# *.log
+
+# Environment variables
+.env*
+# Vercel
+.vercel
+
+# Local config
+.local
+
+# IDE / Editor
+.vscode/
+.idea/
+*.launch.json
+*.code-workspace
+
+# binaries
+/tmp/
+/vercel
+
+# End
