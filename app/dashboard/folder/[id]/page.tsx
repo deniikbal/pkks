@@ -1,11 +1,8 @@
 import { Fragment } from "react"
 import Link from "next/link"
 
-import {
-  DaftarBerkas,
-  KartuFolder,
-  KelompokBerkas,
-} from "@/components/daftar-item"
+import { DaftarBerkas } from "@/components/daftar-berkas-dasbor"
+import { KartuFolder } from "@/components/daftar-item"
 import { PanelTidakAda } from "@/components/panel-tidak-ada"
 import {
   Breadcrumb,
@@ -42,7 +39,11 @@ export default async function HalamanFolder({
   const anak = items.filter((i) => i.indukId === folder.id)
   const subfolder = anak.filter((i) => i.folder)
   const berkas = anak.filter((i) => !i.folder)
-  const remah = jalurKe(folder, peta)
+  // Sama seperti halaman publik: folder akar ("PKKS 2026") tidak ditampilkan
+  // di remah roti karena hanya menambah satu tingkat yang tidak berguna —
+  // kecuali kalau folder akar itu sendiri yang sedang dibuka.
+  const jalur = jalurKe(folder, peta)
+  const remah = jalur.length > 1 ? jalur.filter((b) => b.indukId !== null) : jalur
 
   const jumlahAnak = new Map<string, { folder: number; berkas: number }>()
   for (const item of items) {
@@ -123,11 +124,7 @@ export default async function HalamanFolder({
       {berkas.length > 0 ? (
         <section className="space-y-3">
           <h2 className="text-sm font-semibold">Berkas</h2>
-          <KelompokBerkas>
-            {berkas.map((item) => (
-              <DaftarBerkas key={item.id} item={item} />
-            ))}
-          </KelompokBerkas>
+          <DaftarBerkas baris={berkas.map((item) => ({ item }))} />
         </section>
       ) : null}
     </div>

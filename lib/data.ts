@@ -64,20 +64,9 @@ export async function ambilItem(id: string): Promise<ItemDrive | null> {
   return baris ? petakan(baris) : null
 }
 
-export async function cariItem(kata: string, batas = 60): Promise<ItemDrive[]> {
-  const pola = `%${kata.replace(/[%_]/g, (m) => `\\${m}`)}%`
-  const baris = await query<BarisItem>(
-    `select id, induk_id, nama, mime, folder, ukuran::text, diubah_pada,
-            tautan_lihat, tautan_thumb, kedalaman
-       from drive_item
-      where aktif = true
-        and nama ilike $1
-      order by folder desc, nama asc
-      limit $2`,
-    [pola, batas]
-  )
-  return baris.map(petakan)
-}
+// Pencarian tidak lagi lewat SQL: halaman publik dan dasbor menyaring daftar
+// yang sudah dimuat di peramban, supaya hasilnya muncul tanpa menunggu server
+// menyusun ulang halaman (1,2–2,2 detik per navigasi di app ini).
 
 // Jumlah seluruh keturunan tiap folder (bukan hanya anak langsung). Dipakai
 // halaman publik untuk menuliskan "5 subfolder, 118 berkas" — angka yang

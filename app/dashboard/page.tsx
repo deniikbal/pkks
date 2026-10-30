@@ -4,37 +4,20 @@ import {
   FilesIcon,
   FolderTreeIcon,
   HardDriveIcon,
-  SearchIcon,
   TriangleAlertIcon,
 } from "lucide-react"
 
-import {
-  DaftarBerkas,
-  KartuFolder,
-  KelompokBerkas,
-} from "@/components/daftar-item"
+import { DaftarBerkas } from "@/components/daftar-berkas-dasbor"
+import { KartuFolder } from "@/components/daftar-item"
+import { PencarianDasbor } from "@/components/pencarian-dasbor"
 import { TombolSinkron } from "@/components/tombol-sinkron"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty"
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupButton,
-  InputGroupInput,
-} from "@/components/ui/input-group"
 import { penggunaSaatIni } from "@/lib/auth"
 import {
   ambilLogTerakhir,
   ambilRingkasan,
   ambilSemuaItem,
-  cariItem,
   jalurKe,
   type ItemDrive,
 } from "@/lib/data"
@@ -107,7 +90,21 @@ export default async function Dasbor({
     })
     .slice(0, 12)
 
-  const hasilCari = kata ? await cariItem(kata) : []
+  // Daftar untuk pencarian di peramban. Jalur folder dihitung di sini supaya
+  // baris hasil bisa menyebut letak berkas tanpa satu query tambahan, dan
+  // folder akar ("PKKS 2026") dilewati — sama seperti remah roti.
+  const daftarCari = items.map((i) => {
+    const induk = i.indukId ? peta.get(i.indukId) : null
+    return {
+      item: i,
+      jalur: induk
+        ? jalurKe(induk, peta)
+            .filter((j) => j.indukId !== null)
+            .map((j) => j.nama)
+            .join(" / ")
+        : undefined,
+    }
+  })
   const adaData = ringkasan.jumlahBerkas + ringkasan.jumlahFolder > 0
   const admin = pengguna?.peran === "admin"
 
@@ -213,97 +210,29 @@ export default async function Dasbor({
         </div>
       )}
 
-      <form action="/dashboard" method="get" role="search" className="max-w-xl">
-        <InputGroup className="h-11 bg-card">
-          <InputGroupAddon>
-            <SearchIcon />
-          </InputGroupAddon>
-          <InputGroupInput
-            name="q"
-            type="search"
-            defaultValue={kata}
-            placeholder="Cari nama dokumen"
-            aria-label="Cari dokumen"
-            className="h-11 text-base md:text-base"
-          />
-          <InputGroupAddon align="inline-end">
-            <InputGroupButton type="submit" variant="secondary" size="sm">
-              Cari
-            </InputGroupButton>
-          </InputGroupAddon>
-        </InputGroup>
-      </form>
+      <PencarianDasbor awal={kata} daftar={daftarCari}>
+        {folderPuncak.length > 0 ? (
+          <section className="space-y-3">
+            <h2 className="text-sm font-semibold">Folder</h2>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {folderPuncak.map((folder) => (
+                <KartuFolder
+                  key={folder.id}
+                  item={folder}
+                  isi={jumlahAnak.get(folder.id) ?? { folder: 0, berkas: 0 }}
+                />
+              ))}
+            </div>
+          </section>
+        ) : null}
 
-      {kata ? (
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold">
-            Hasil pencarian &quot;{kata}&quot;
-            <span className="ml-2 font-normal text-muted-foreground">
-              {hasilCari.length} item
-            </span>
-          </h2>
-
-          {hasilCari.length === 0 ? (
-            <Empty className="border border-dashed border-border bg-card/70">
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <SearchIcon />
-                </EmptyMedia>
-                <EmptyTitle>Tidak ada dokumen dengan nama itu</EmptyTitle>
-                <EmptyDescription>
-                  Coba kata lain, atau telusuri lewat daftar folder di{" "}
-                  <Link href="/dashboard">halaman utama</Link>.
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          ) : (
-            <KelompokBerkas>
-              {hasilCari.map((item) => {
-                const induk = item.indukId ? peta.get(item.indukId) : null
-                return (
-                  <DaftarBerkas
-                    key={item.id}
-                    item={item}
-                    jalur={
-                      induk
-                        ? jalurKe(induk, peta)
-                            .map((j) => j.nama)
-                            .join(" / ")
-                        : undefined
-                    }
-                  />
-                )
-              })}
-            </KelompokBerkas>
-          )}
-        </section>
-      ) : null}
-
-      {!kata && folderPuncak.length > 0 ? (
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold">Folder</h2>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {folderPuncak.map((folder) => (
-              <KartuFolder
-                key={folder.id}
-                item={folder}
-                isi={jumlahAnak.get(folder.id) ?? { folder: 0, berkas: 0 }}
-              />
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      {!kata && berkasTerbaru.length > 0 ? (
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold">Berkas terbaru diubah</h2>
-          <KelompokBerkas>
-            {berkasTerbaru.map((item) => (
-              <DaftarBerkas key={item.id} item={item} />
-            ))}
-          </KelompokBerkas>
-        </section>
-      ) : null}
+        {berkasTerbaru.length > 0 ? (
+          <section className="space-y-3">
+            <h2 className="text-sm font-semibold">Berkas terbaru diubah</h2>
+            <DaftarBerkas baris={berkasTerbaru.map((item) => ({ item }))} />
+          </section>
+        ) : null}
+      </PencarianDasbor>
     </div>
   )
 }

@@ -2,7 +2,6 @@ import Link from "next/link"
 import { ArchiveIcon } from "lucide-react"
 
 import { MenuPengguna } from "@/components/menu-pengguna"
-import { Button } from "@/components/ui/button"
 
 export function Merek({ ringkas = false }: { ringkas?: boolean }) {
   return (
@@ -34,30 +33,6 @@ export function KepalaAplikasi({
         <Merek />
 
         <div className="ml-auto flex items-center gap-1">
-          <nav aria-label="Navigasi utama" className="hidden items-center gap-1 md:flex">
-            <Button
-              variant="ghost"
-              nativeButton={false}
-              render={<Link href="/dashboard" />}
-              className="text-primary-foreground/85 hover:bg-primary-foreground/10 hover:text-primary-foreground"
-            >
-              Arsip
-            </Button>
-            <Button
-              variant="ghost"
-              nativeButton={false}
-              render={<Link href="/dashboard/sandi" />}
-              className="text-primary-foreground/85 hover:bg-primary-foreground/10 hover:text-primary-foreground"
-            >
-              Ganti sandi
-            </Button>
-          </nav>
-
-          <span
-            aria-hidden="true"
-            className="mx-1 hidden h-6 w-px bg-primary-foreground/20 md:block"
-          />
-
           <MenuPengguna
             nama={pengguna.nama}
             email={pengguna.email}

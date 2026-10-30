@@ -14,17 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemDescription,
-  ItemGroup,
-  ItemMedia,
-  ItemTitle,
-} from "@/components/ui/item"
 import type { ItemDrive } from "@/lib/data"
-import { formatTanggal, formatUkuran, jenisBerkas } from "@/lib/format"
 
 // Ikon dipilih dari MIME yang benar-benar dikirim Drive, bukan dari akhiran
 // nama berkas yang bisa saja salah.
@@ -88,50 +78,5 @@ export function KartuFolder({
         </CardHeader>
       </Card>
     </Link>
-  )
-}
-
-// Satu baris berkas. Seluruh baris adalah tautan, jadi pengguna tidak perlu
-// mengarahkan kursor tepat ke nama berkas.
-export function DaftarBerkas({
-  item,
-  jalur,
-}: {
-  item: ItemDrive
-  jalur?: string
-}) {
-  return (
-    <Item
-      render={<Link href={`/dashboard/dokumen/${item.id}`} />}
-      className="gap-3 rounded-none px-4 py-3 hover:bg-accent/50 focus-visible:ring-inset"
-    >
-      <ItemMedia variant="icon" className="text-muted-foreground">
-        <IkonBerkas mime={item.mime} folder={item.folder} />
-      </ItemMedia>
-
-      <ItemContent className="min-w-0">
-        <ItemTitle className="w-full min-w-0">
-          <span className="truncate">{item.nama}</span>
-        </ItemTitle>
-        <ItemDescription className="text-xs">
-          {jenisBerkas(item.mime, item.folder)}
-          {jalur ? ` · ${jalur}` : null}
-        </ItemDescription>
-      </ItemContent>
-
-      <ItemActions className="w-full justify-between gap-4 text-xs text-muted-foreground sm:w-auto sm:justify-end">
-        <span className="tabular-nums">{formatUkuran(item.ukuran)}</span>
-        <span className="tabular-nums">{formatTanggal(item.diubahPada)}</span>
-      </ItemActions>
-    </Item>
-  )
-}
-
-// Pembungkus daftar: satu bidang berkartu dengan garis pemisah antar baris.
-export function KelompokBerkas({ children }: { children: React.ReactNode }) {
-  return (
-    <ItemGroup className="gap-0 divide-y divide-border overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
-      {children}
-    </ItemGroup>
   )
 }

@@ -108,13 +108,16 @@ export default async function HalamanArsipPublik({
                 <Fragment key={bagian.id}>
                   <BreadcrumbSeparator />
                   <BreadcrumbItem>
+                    {/* Nama folder dipakai apa adanya supaya nomor bagiannya
+                        ikut tampil ("1.1 Manajerial"), sama seperti remah roti
+                        di dasbor. Judul besar di bawah tetap tanpa nomor. */}
                     {urutan === remah.length - 1 ? (
-                      <BreadcrumbPage>{pecahNama(bagian.nama).judul}</BreadcrumbPage>
+                      <BreadcrumbPage>{bagian.nama}</BreadcrumbPage>
                     ) : (
                       <BreadcrumbLink
                         render={<Link href={`/arsip/${bagian.id}`} />}
                       >
-                        {pecahNama(bagian.nama).judul}
+                        {bagian.nama}
                       </BreadcrumbLink>
                     )}
                   </BreadcrumbItem>
