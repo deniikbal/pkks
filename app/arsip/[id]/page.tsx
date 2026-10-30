@@ -22,7 +22,6 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
-import { penggunaSaatIni } from "@/lib/auth"
 import { ambilSemuaItem, hitungKeturunan, jalurKe, type ItemDrive } from "@/lib/data"
 
 export const dynamic = "force-dynamic"
@@ -33,7 +32,6 @@ export default async function HalamanArsipPublik({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const pengguna = await penggunaSaatIni()
   const items = await ambilSemuaItem()
   const peta = new Map<string, ItemDrive>(items.map((i) => [i.id, i]))
   const folder = peta.get(id)
@@ -41,7 +39,7 @@ export default async function HalamanArsipPublik({
   if (!folder || !folder.folder) {
     return (
       <div className="flex min-h-dvh flex-col">
-        <KepalaPublik masuk={Boolean(pengguna)} />
+        <KepalaPublik />
         <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-16 sm:px-6">
           <Empty className="border border-dashed border-border bg-muted/60">
             <EmptyHeader>
@@ -92,7 +90,7 @@ export default async function HalamanArsipPublik({
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <KepalaPublik masuk={Boolean(pengguna)} />
+      <KepalaPublik />
 
       <main className="flex-1">
         <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">

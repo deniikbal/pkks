@@ -18,7 +18,6 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
-import { penggunaSaatIni } from "@/lib/auth"
 import { akarDari, ambilRingkasan, ambilSemuaItem, hitungKeturunan } from "@/lib/data"
 import { statusSumber } from "@/lib/drive"
 import { formatTanggalJam } from "@/lib/format"
@@ -50,7 +49,6 @@ export default async function BerandaPublik({
 }: {
   searchParams: Promise<{ q?: string }>
 }) {
-  const pengguna = await penggunaSaatIni()
   const kata = ((await searchParams).q ?? "").trim()
   const items = await ambilSemuaItem()
   const ringkasan = await ambilRingkasan()
@@ -89,7 +87,7 @@ export default async function BerandaPublik({
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <KepalaPublik masuk={Boolean(pengguna)} />
+      <KepalaPublik />
 
       <main className="flex-1">
         {/* Satu layar penuh: judul ringkas, pencarian selebar halaman, lalu
@@ -104,7 +102,7 @@ export default async function BerandaPublik({
                 Arsip terbuka
               </p>
               <h1 className="mt-2 text-[clamp(1.35rem,2.4vw,1.9rem)] font-semibold leading-tight tracking-tight text-balance">
-                Dokumen penilaian kinerja kepala sekolah
+                Dokumen Penilaian Kinerja Kepala Sekolah
               </h1>
             </div>
 
