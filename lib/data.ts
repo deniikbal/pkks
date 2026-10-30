@@ -79,6 +79,47 @@ export async function cariItem(kata: string, batas = 60): Promise<ItemDrive[]> {
   return baris.map(petakan)
 }
 
+// Jumlah seluruh keturunan tiap folder (bukan hanya anak langsung). Dipakai
+// halaman publik untuk menuliskan "5 subfolder, 118 berkas" — angka yang
+// berguna bagi pembaca, bukan sekadar isi satu lapis.
+export function hitungKeturunan(
+  items: ItemDrive[]
+): Map<string, { folder: number; berkas: number }> {
+  const anak = new Map<string, ItemDrive[]>()
+  for (const item of items) {
+    if (!item.indukId) continue
+    const daftar = anak.get(item.indukId)
+    if (daftar) daftar.push(item)
+    else anak.set(item.indukId, [item])
+  }
+
+  const hasil = new Map<string, { folder: number; berkas: number }>()
+  for (const item of items) {
+    if (!item.folder) continue
+
+    let folder = 0
+    let berkas = 0
+    const tumpuk = [...(anak.get(item.id) ?? [])]
+    const dilihat = new Set<string>([item.id])
+
+    while (tumpuk.length > 0) {
+      const sekarang = tumpuk.pop()
+      if (!sekarang || dilihat.has(sekarang.id)) continue
+      dilihat.add(sekarang.id)
+      if (sekarang.folder) {
+        folder += 1
+        tumpuk.push(...(anak.get(sekarang.id) ?? []))
+      } else {
+        berkas += 1
+      }
+    }
+
+    hasil.set(item.id, { folder, berkas })
+  }
+
+  return hasil
+}
+
 // Jalur dari akar ke sebuah item, dipakai untuk remah roti.
 export function jalurKe(
   item: ItemDrive,

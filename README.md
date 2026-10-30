@@ -57,6 +57,10 @@ punya cakupan `https://www.googleapis.com/auth/drive.readonly`. Cakupan
 `drive.file` tidak cukup: dengan cakupan itu aplikasi hanya melihat berkas yang
 dibuatnya sendiri.
 
+Langkah lengkap untuk mendapatkan ketiga nilai tersebut, termasuk cara mengambil
+refresh token lewat `node scripts/ambil-refresh-token.mjs`, ada di
+[docs/oauth-google-drive.md](docs/oauth-google-drive.md).
+
 Setelah `.env` diubah: `pm2 restart pkks`.
 
 ## Domain dan SSL

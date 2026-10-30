@@ -1,7 +1,22 @@
+import { Fragment } from "react"
 import Link from "next/link"
+
+import {
+  DaftarBerkas,
+  KartuFolder,
+  KelompokBerkas,
+} from "@/components/daftar-item"
 import { PanelTidakAda } from "@/components/panel-tidak-ada"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
 import { ambilSemuaItem, jalurKe, type ItemDrive } from "@/lib/data"
-import { BarisBerkas, KartuFolder } from "@/components/daftar-item"
 
 export const dynamic = "force-dynamic"
 
@@ -39,59 +54,61 @@ export default async function HalamanFolder({
   }
 
   return (
-    <div className="space-y-6">
-      <nav aria-label="Lokasi folder" className="text-sm">
-        <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-redup">
-          <li>
-            <Link
-              href="/dashboard"
-              className="font-medium text-navy underline underline-offset-2"
-            >
-              Arsip
-            </Link>
-          </li>
-          {remah.map((bagian, urutan) => {
-            const terakhir = urutan === remah.length - 1
-            return (
-              <li key={bagian.id} className="flex items-center gap-2">
-                <span aria-hidden="true">/</span>
-                {terakhir ? (
-                  <span className="text-tinta">{bagian.nama}</span>
-                ) : (
-                  <Link
-                    href={`/dashboard/folder/${bagian.id}`}
-                    className="font-medium text-navy underline underline-offset-2"
-                  >
-                    {bagian.nama}
-                  </Link>
-                )}
-              </li>
-            )
-          })}
-        </ol>
-      </nav>
+    <div className="space-y-8">
+      <div className="space-y-4">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink render={<Link href="/dashboard" />}>
+                Arsip
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            {remah.map((bagian, urutan) => (
+              <Fragment key={bagian.id}>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  {urutan === remah.length - 1 ? (
+                    <BreadcrumbPage>{bagian.nama}</BreadcrumbPage>
+                  ) : (
+                    <BreadcrumbLink
+                      render={<Link href={`/dashboard/folder/${bagian.id}`} />}
+                    >
+                      {bagian.nama}
+                    </BreadcrumbLink>
+                  )}
+                </BreadcrumbItem>
+              </Fragment>
+            ))}
+          </BreadcrumbList>
+        </Breadcrumb>
 
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight text-tinta sm:text-2xl">
-          {folder.nama}
-        </h1>
-        <p className="mt-1 text-sm text-redup">
-          {subfolder.length} subfolder, {berkas.length} berkas langsung di
-          folder ini.
-        </p>
+        <header className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight text-balance">
+            {folder.nama}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {subfolder.length} subfolder, {berkas.length} berkas langsung di
+            folder ini.
+          </p>
+        </header>
       </div>
 
       {anak.length === 0 ? (
-        <p className="border-l-[3px] border-garis bg-kertas-tinggi px-4 py-6 text-sm text-redup">
-          Folder ini kosong, atau isinya belum ikut tersinkron. Admin bisa
-          menjalankan sinkronisasi dari halaman arsip.
-        </p>
+        <Empty className="border border-dashed border-border bg-card/70">
+          <EmptyHeader>
+            <EmptyTitle>Folder ini kosong</EmptyTitle>
+            <EmptyDescription>
+              Isinya belum ikut tersinkron. Admin bisa menjalankan sinkronisasi
+              dari halaman arsip.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       ) : null}
 
       {subfolder.length > 0 ? (
-        <section>
-          <h2 className="text-sm font-semibold text-tinta">Subfolder</h2>
-          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold">Subfolder</h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {subfolder.map((sub) => (
               <KartuFolder
                 key={sub.id}
@@ -104,13 +121,13 @@ export default async function HalamanFolder({
       ) : null}
 
       {berkas.length > 0 ? (
-        <section>
-          <h2 className="text-sm font-semibold text-tinta">Berkas</h2>
-          <ul className="mt-3 border-l-[3px] border-navy bg-kertas-tinggi">
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold">Berkas</h2>
+          <KelompokBerkas>
             {berkas.map((item) => (
-              <BarisBerkas key={item.id} item={item} />
+              <DaftarBerkas key={item.id} item={item} />
             ))}
-          </ul>
+          </KelompokBerkas>
         </section>
       ) : null}
     </div>

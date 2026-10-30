@@ -2,42 +2,49 @@
 
 import { useActionState } from "react"
 import { useFormStatus } from "react-dom"
+import { CircleCheckIcon, RefreshCwIcon, TriangleAlertIcon } from "lucide-react"
+
 import { aksiSinkron, type KeadaanSinkron } from "@/app/actions"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 
 const keadaanAwal: KeadaanSinkron = { pesan: null, jenis: null }
 
 function TombolKirim({ boleh }: { boleh: boolean }) {
   const { pending } = useFormStatus()
   return (
-    <button
-      type="submit"
-      disabled={pending || !boleh}
-      className="min-h-11 rounded-sm bg-navy px-4 text-sm font-semibold text-white transition-colors hover:bg-navy/90 disabled:cursor-not-allowed disabled:opacity-60"
-    >
+    <Button type="submit" disabled={pending || !boleh} className="h-9 px-3.5">
+      {pending ? <Spinner /> : <RefreshCwIcon />}
       {pending ? "Menyinkronkan..." : "Sinkronkan dari Drive"}
-    </button>
+    </Button>
   )
 }
 
 export function TombolSinkron({ boleh }: { boleh: boolean }) {
   const [keadaan, kirim] = useActionState(aksiSinkron, keadaanAwal)
+  const gagal = keadaan.jenis === "gagal"
 
   return (
     <div className="space-y-3">
       <form action={kirim}>
         <TombolKirim boleh={boleh} />
       </form>
+
       {keadaan.pesan ? (
-        <p
-          role="status"
+        <Alert
+          role={gagal ? "alert" : "status"}
+          variant={gagal ? "destructive" : "default"}
           className={
-            keadaan.jenis === "gagal"
-              ? "rounded-sm border border-arsip/40 bg-arsip-lembut px-3 py-2 text-sm text-arsip"
-              : "rounded-sm border border-sahih/40 bg-sahih-lembut px-3 py-2 text-sm text-sahih"
+            gagal
+              ? "bg-destructive/5"
+              : "border-sahih/30 bg-sahih-lembut text-sahih [&_[data-slot=alert-description]]:text-sahih"
           }
         >
-          {keadaan.pesan}
-        </p>
+          {gagal ? <TriangleAlertIcon /> : <CircleCheckIcon />}
+          <AlertTitle>{gagal ? "Sinkron gagal" : "Sinkron selesai"}</AlertTitle>
+          <AlertDescription>{keadaan.pesan}</AlertDescription>
+        </Alert>
       ) : null}
     </div>
   )

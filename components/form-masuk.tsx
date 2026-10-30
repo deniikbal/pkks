@@ -1,7 +1,14 @@
 "use client"
 
 import { useActionState } from "react"
+import { CircleAlertIcon, LogInIcon } from "lucide-react"
+
 import { aksiMasuk, type KeadaanMasuk } from "@/app/actions"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
+import { Spinner } from "@/components/ui/spinner"
 
 const keadaanAwal: KeadaanMasuk = { galat: null }
 
@@ -9,58 +16,52 @@ export function FormMasuk() {
   const [keadaan, kirim, sedangKirim] = useActionState(aksiMasuk, keadaanAwal)
 
   return (
-    <form action={kirim} className="space-y-5" noValidate>
-      <div className="space-y-2">
-        <label
-          htmlFor="email"
-          className="block text-sm font-medium text-tinta"
-        >
-          Email
-        </label>
-        <input
-          id="email"
-          name="email"
-          type="email"
-          autoComplete="username"
-          required
-          className="h-12 w-full rounded-sm border border-garis bg-kertas-tinggi px-3 text-base text-tinta placeholder:text-redup/70"
-          placeholder="nama@sekolah.sch.id"
-        />
-      </div>
+    <form action={kirim} noValidate>
+      <FieldGroup className="gap-5">
+        <Field>
+          <FieldLabel htmlFor="email">Email</FieldLabel>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="username"
+            required
+            placeholder="nama@sekolah.sch.id"
+            aria-invalid={keadaan.galat ? true : undefined}
+            className="h-11 text-base md:text-base"
+          />
+        </Field>
 
-      <div className="space-y-2">
-        <label
-          htmlFor="sandi"
-          className="block text-sm font-medium text-tinta"
-        >
-          Kata sandi
-        </label>
-        <input
-          id="sandi"
-          name="sandi"
-          type="password"
-          autoComplete="current-password"
-          required
-          className="h-12 w-full rounded-sm border border-garis bg-kertas-tinggi px-3 text-base text-tinta"
-        />
-      </div>
+        <Field>
+          <FieldLabel htmlFor="sandi">Kata sandi</FieldLabel>
+          <Input
+            id="sandi"
+            name="sandi"
+            type="password"
+            autoComplete="current-password"
+            required
+            aria-invalid={keadaan.galat ? true : undefined}
+            className="h-11 text-base md:text-base"
+          />
+        </Field>
 
-      {keadaan.galat ? (
-        <p
-          role="alert"
-          className="rounded-sm border border-arsip/40 bg-arsip-lembut px-3 py-2 text-sm text-arsip"
-        >
-          {keadaan.galat}
-        </p>
-      ) : null}
+        {keadaan.galat ? (
+          <Alert variant="destructive" className="bg-destructive/5">
+            <CircleAlertIcon />
+            <AlertTitle>Tidak bisa masuk</AlertTitle>
+            <AlertDescription>{keadaan.galat}</AlertDescription>
+          </Alert>
+        ) : null}
 
-      <button
-        type="submit"
-        disabled={sedangKirim}
-        className="h-12 w-full rounded-sm bg-navy px-4 text-base font-semibold text-white transition-colors hover:bg-navy/90 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {sedangKirim ? "Memeriksa..." : "Masuk"}
-      </button>
+        <Button
+          type="submit"
+          disabled={sedangKirim}
+          className="h-11 w-full text-base"
+        >
+          {sedangKirim ? <Spinner /> : <LogInIcon />}
+          {sedangKirim ? "Memeriksa..." : "Masuk"}
+        </Button>
+      </FieldGroup>
     </form>
   )
 }

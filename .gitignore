@@ -29,6 +29,9 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 
+# Data proyek lokal (catatan kerja, bukan bagian aplikasi)
+.workbuddy-ai/
+
 # IDE / Editor
 .vscode/
 .idea/

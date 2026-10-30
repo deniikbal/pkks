@@ -1,4 +1,34 @@
 import Link from "next/link"
+import {
+  CalendarClockIcon,
+  FilesIcon,
+  FolderTreeIcon,
+  HardDriveIcon,
+  SearchIcon,
+  TriangleAlertIcon,
+} from "lucide-react"
+
+import {
+  DaftarBerkas,
+  KartuFolder,
+  KelompokBerkas,
+} from "@/components/daftar-item"
+import { TombolSinkron } from "@/components/tombol-sinkron"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group"
 import { penggunaSaatIni } from "@/lib/auth"
 import {
   ambilLogTerakhir,
@@ -10,31 +40,34 @@ import {
 } from "@/lib/data"
 import { statusSumber } from "@/lib/drive"
 import { formatTanggalJam, formatUkuran } from "@/lib/format"
-import { BarisBerkas, KartuFolder } from "@/components/daftar-item"
-import { TombolSinkron } from "@/components/tombol-sinkron"
 
 export const dynamic = "force-dynamic"
 
-function PanelKeterangan({
-  judul,
-  nada,
-  children,
+const angka = new Intl.NumberFormat("id-ID")
+
+function KartuStatistik({
+  label,
+  nilai,
+  ikon,
 }: {
-  judul: string
-  nada: "arsip" | "netral"
-  children: React.ReactNode
+  label: string
+  nilai: string
+  ikon: React.ReactNode
 }) {
-  const kelas =
-    nada === "arsip"
-      ? "border-arsip bg-arsip-lembut"
-      : "border-garis bg-kertas-tinggi"
   return (
-    <section className={`border-l-[3px] ${kelas} p-5`}>
-      <h2 className="text-base font-semibold text-tinta">{judul}</h2>
-      <div className="mt-2 space-y-2 text-sm leading-relaxed text-tinta">
-        {children}
-      </div>
-    </section>
+    <Card size="sm" className="gap-1.5">
+      <CardHeader>
+        <CardDescription className="flex items-center gap-1.5 text-xs">
+          <span className="text-muted-foreground/70 [&_svg]:size-3.5">
+            {ikon}
+          </span>
+          {label}
+        </CardDescription>
+        <CardTitle className="text-lg font-semibold tracking-tight tabular-nums">
+          {nilai}
+        </CardTitle>
+      </CardHeader>
+    </Card>
   )
 }
 
@@ -79,150 +112,177 @@ export default async function Dasbor({
   const admin = pengguna?.peran === "admin"
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight text-tinta sm:text-2xl">
+    <div className="space-y-8">
+      <header className="space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight text-balance">
           Arsip dokumen PKKS
         </h1>
-        <p className="mt-1 text-sm text-redup">
+        <p className="text-sm leading-relaxed text-muted-foreground">
           Daftar dokumen penilaian kinerja kepala sekolah yang tersimpan di
           Google Drive sekolah.
         </p>
-      </div>
+      </header>
 
-      {/* Blok status sumber data. Ini satu-satunya bagian yang berbeda dari
-          pola daftar di bawahnya, supaya keadaan "belum tersambung" tidak
-          terlewat. */}
+      {/* Keadaan sumber data. Selalu muncul paling atas supaya keadaan "belum
+          tersambung" tidak terlewat di balik daftar yang kosong. */}
       {!sumber.siap ? (
-        <PanelKeterangan judul="Sumber data belum tersambung" nada="arsip">
-          <p>{sumber.pesan}</p>
-          <p>
-            Yang perlu dilengkapi admin sekolah: ID folder Google Drive, berkas
-            kredensial service account, lalu folder itu dibagikan ke alamat
-            email service account dengan izin lihat. Selama tiga hal itu belum
-            lengkap, halaman ini memang tidak menampilkan dokumen apa pun.
-          </p>
-          <p className="text-xs text-redup">
-            Cara pengisiannya ada di berkas README pada server aplikasi ini.
-          </p>
-        </PanelKeterangan>
+        <Alert variant="destructive" className="bg-destructive/5">
+          <TriangleAlertIcon />
+          <AlertTitle>Sumber data belum tersambung</AlertTitle>
+          <AlertDescription className="space-y-2">
+            <p>{sumber.pesan}</p>
+            <p>
+              Yang perlu dilengkapi admin sekolah: ID folder Google Drive,
+              kredensial akun layanan, lalu folder itu dibagikan ke alamat email
+              akun tersebut dengan izin lihat. Selama tiga hal itu belum
+              lengkap, halaman ini memang tidak menampilkan dokumen apa pun.
+            </p>
+            <p className="text-xs">
+              Panduan pengisian ada di README dan docs/oauth-google-drive.md.
+            </p>
+          </AlertDescription>
+        </Alert>
       ) : !adaData ? (
-        <PanelKeterangan judul="Belum ada data tersinkron" nada="netral">
-          <p>
-            Kredensial dan folder sudah terisi, tetapi belum ada data yang
-            diambil dari Google Drive. Jalankan sinkronisasi sekali untuk
-            mengisi daftar.
-          </p>
-          {admin ? (
-            <TombolSinkron boleh />
-          ) : (
-            <p className="text-xs text-redup">
-              Sinkronisasi hanya bisa dijalankan akun admin.
-            </p>
-          )}
-        </PanelKeterangan>
+        <Card>
+          <CardHeader>
+            <CardTitle>Belum ada data tersinkron</CardTitle>
+            <CardDescription>
+              Kredensial dan folder sudah terisi, tetapi belum ada data yang
+              diambil dari Google Drive. Jalankan sinkronisasi sekali untuk
+              mengisi daftar.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {admin ? (
+              <TombolSinkron boleh />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Sinkronisasi hanya bisa dijalankan akun admin.
+              </p>
+            )}
+          </CardContent>
+        </Card>
       ) : (
-        <section className="border-l-[3px] border-navy bg-kertas-tinggi px-4 py-3">
-          <dl className="flex flex-wrap items-baseline gap-x-6 gap-y-2 text-sm">
-            <div className="flex items-baseline gap-2">
-              <dt className="text-redup">Berkas</dt>
-              <dd className="font-semibold tabular-nums text-tinta">
-                {ringkasan.jumlahBerkas}
-              </dd>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <dt className="text-redup">Folder</dt>
-              <dd className="font-semibold tabular-nums text-tinta">
-                {ringkasan.jumlahFolder}
-              </dd>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <dt className="text-redup">Ukuran</dt>
-              <dd className="font-semibold tabular-nums text-tinta">
-                {formatUkuran(ringkasan.totalByte)}
-              </dd>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <dt className="text-redup">Terakhir diambil</dt>
-              <dd className="tabular-nums text-tinta">
-                {formatTanggalJam(ringkasan.diperbaruiPada)}
-              </dd>
-            </div>
-          </dl>
+        <div className="space-y-4">
+          <section
+            aria-label="Ringkasan arsip"
+            className="grid grid-cols-2 gap-3 lg:grid-cols-4"
+          >
+            <KartuStatistik
+              label="Berkas"
+              nilai={angka.format(ringkasan.jumlahBerkas)}
+              ikon={<FilesIcon aria-hidden="true" />}
+            />
+            <KartuStatistik
+              label="Folder"
+              nilai={angka.format(ringkasan.jumlahFolder)}
+              ikon={<FolderTreeIcon aria-hidden="true" />}
+            />
+            <KartuStatistik
+              label="Ukuran"
+              nilai={formatUkuran(ringkasan.totalByte)}
+              ikon={<HardDriveIcon aria-hidden="true" />}
+            />
+            <KartuStatistik
+              label="Terakhir diambil"
+              nilai={formatTanggalJam(ringkasan.diperbaruiPada)}
+              ikon={<CalendarClockIcon aria-hidden="true" />}
+            />
+          </section>
+
           {log && log.status === "gagal" ? (
-            <p className="mt-3 border-t border-garis pt-3 text-sm text-arsip">
-              Sinkron terakhir gagal: {log.galat ?? "tanpa keterangan"}.
-            </p>
+            <Alert variant="destructive" className="bg-destructive/5">
+              <TriangleAlertIcon />
+              <AlertTitle>Sinkron terakhir gagal</AlertTitle>
+              <AlertDescription>
+                {log.galat ?? "Tanpa keterangan."}
+              </AlertDescription>
+            </Alert>
           ) : null}
+
           {admin ? (
-            <div className="mt-3 border-t border-garis pt-3">
-              <TombolSinkron boleh={sumber.siap} />
-            </div>
+            <Card size="sm">
+              <CardContent className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm text-muted-foreground">
+                  Ambil ulang daftar berkas dari Google Drive sekolah.
+                </p>
+                <TombolSinkron boleh={sumber.siap} />
+              </CardContent>
+            </Card>
           ) : null}
-        </section>
+        </div>
       )}
 
-      <form action="/dashboard" method="get" className="flex gap-2">
-        <label htmlFor="q" className="sr-only">
-          Cari dokumen
-        </label>
-        <input
-          id="q"
-          name="q"
-          type="search"
-          defaultValue={kata}
-          placeholder="Cari nama dokumen"
-          className="h-12 w-full min-w-0 rounded-sm border border-garis bg-kertas-tinggi px-3 text-base text-tinta placeholder:text-redup/70"
-        />
-        <button
-          type="submit"
-          className="h-12 shrink-0 rounded-sm border border-navy px-4 text-sm font-semibold text-navy transition-colors hover:bg-navy-lembut"
-        >
-          Cari
-        </button>
+      <form action="/dashboard" method="get" role="search" className="max-w-xl">
+        <InputGroup className="h-11 bg-card">
+          <InputGroupAddon>
+            <SearchIcon />
+          </InputGroupAddon>
+          <InputGroupInput
+            name="q"
+            type="search"
+            defaultValue={kata}
+            placeholder="Cari nama dokumen"
+            aria-label="Cari dokumen"
+            className="h-11 text-base md:text-base"
+          />
+          <InputGroupAddon align="inline-end">
+            <InputGroupButton type="submit" variant="secondary" size="sm">
+              Cari
+            </InputGroupButton>
+          </InputGroupAddon>
+        </InputGroup>
       </form>
 
       {kata ? (
-        <section>
-          <h2 className="text-sm font-semibold text-tinta">
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold">
             Hasil pencarian &quot;{kata}&quot;
-            <span className="ml-2 font-normal text-redup">
+            <span className="ml-2 font-normal text-muted-foreground">
               {hasilCari.length} item
             </span>
           </h2>
+
           {hasilCari.length === 0 ? (
-            <p className="mt-3 border-l-[3px] border-garis bg-kertas-tinggi px-4 py-6 text-sm text-redup">
-              Tidak ada dokumen dengan nama itu. Coba kata lain, atau telusuri
-              lewat daftar folder di{" "}
-              <Link
-                href="/dashboard"
-                className="font-medium text-navy underline underline-offset-2"
-              >
-                halaman utama
-              </Link>
-              .
-            </p>
+            <Empty className="border border-dashed border-border bg-card/70">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <SearchIcon />
+                </EmptyMedia>
+                <EmptyTitle>Tidak ada dokumen dengan nama itu</EmptyTitle>
+                <EmptyDescription>
+                  Coba kata lain, atau telusuri lewat daftar folder di{" "}
+                  <Link href="/dashboard">halaman utama</Link>.
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           ) : (
-            <ul className="mt-3 border-l-[3px] border-navy bg-kertas-tinggi">
+            <KelompokBerkas>
               {hasilCari.map((item) => {
                 const induk = item.indukId ? peta.get(item.indukId) : null
                 return (
-                  <BarisBerkas
+                  <DaftarBerkas
                     key={item.id}
                     item={item}
-                    jalur={induk ? jalurKe(induk, peta).map((j) => j.nama).join(" / ") : undefined}
+                    jalur={
+                      induk
+                        ? jalurKe(induk, peta)
+                            .map((j) => j.nama)
+                            .join(" / ")
+                        : undefined
+                    }
                   />
                 )
               })}
-            </ul>
+            </KelompokBerkas>
           )}
         </section>
       ) : null}
 
       {!kata && folderPuncak.length > 0 ? (
-        <section>
-          <h2 className="text-sm font-semibold text-tinta">Folder</h2>
-          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold">Folder</h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {folderPuncak.map((folder) => (
               <KartuFolder
                 key={folder.id}
@@ -235,15 +295,13 @@ export default async function Dasbor({
       ) : null}
 
       {!kata && berkasTerbaru.length > 0 ? (
-        <section>
-          <h2 className="text-sm font-semibold text-tinta">
-            Berkas terbaru diubah
-          </h2>
-          <ul className="mt-3 border-l-[3px] border-navy bg-kertas-tinggi">
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold">Berkas terbaru diubah</h2>
+          <KelompokBerkas>
             {berkasTerbaru.map((item) => (
-              <BarisBerkas key={item.id} item={item} />
+              <DaftarBerkas key={item.id} item={item} />
             ))}
-          </ul>
+          </KelompokBerkas>
         </section>
       ) : null}
     </div>

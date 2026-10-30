@@ -1,0 +1,4 @@
+# Setting pnpm 12 dibaca dari berkas ini (bukan .npmrc).
+# Dependensi dipasang manual lewat `pnpm install`, jadi instalasi otomatis
+# sebelum menjalankan script tidak diperlukan.
+verifyDepsBeforeRun: false

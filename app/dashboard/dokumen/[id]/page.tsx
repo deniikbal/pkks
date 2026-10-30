@@ -1,6 +1,36 @@
+import { Fragment } from "react"
 import Link from "next/link"
 import { redirect } from "next/navigation"
+import {
+  ArrowLeftIcon,
+  DownloadIcon,
+  ExternalLinkIcon,
+  FileQuestionIcon,
+} from "lucide-react"
+
 import { PanelTidakAda } from "@/components/panel-tidak-ada"
+import { Badge } from "@/components/ui/badge"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
+import { Button } from "@/components/ui/button"
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableRow,
+} from "@/components/ui/table"
 import { ambilSemuaItem, jalurKe, type ItemDrive } from "@/lib/data"
 import {
   formatTanggalJam,
@@ -49,75 +79,108 @@ export default async function HalamanDokumen({
   const remah = induk ? jalurKe(induk, peta) : []
   const asliGoogle = item.mime.startsWith(MIME_GOOGLE)
 
+  const rincian = [
+    { label: "Nama berkas", nilai: item.nama },
+    { label: "Jenis", nilai: jenisBerkas(item.mime, false) },
+    { label: "Ukuran", nilai: formatUkuran(item.ukuran) },
+    { label: "Terakhir diubah", nilai: formatTanggalJam(item.diubahPada) },
+    { label: "Folder induk", nilai: induk ? induk.nama : "Akar arsip" },
+    { label: "ID berkas di Drive", nilai: item.id },
+  ]
+
   return (
-    <div className="space-y-6">
-      <nav aria-label="Lokasi berkas" className="text-sm">
-        <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-redup">
-          <li>
-            <Link
-              href="/dashboard"
-              className="font-medium text-navy underline underline-offset-2"
-            >
-              Arsip
-            </Link>
-          </li>
-          {remah.map((bagian) => (
-            <li key={bagian.id} className="flex items-center gap-2">
-              <span aria-hidden="true">/</span>
-              <Link
-                href={`/dashboard/folder/${bagian.id}`}
-                className="font-medium text-navy underline underline-offset-2"
-              >
-                {bagian.nama}
-              </Link>
-            </li>
-          ))}
-        </ol>
-      </nav>
+    <div className="space-y-8">
+      <div className="space-y-4">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink render={<Link href="/dashboard" />}>
+                Arsip
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            {remah.map((bagian) => (
+              <Fragment key={bagian.id}>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbLink
+                    render={<Link href={`/dashboard/folder/${bagian.id}`} />}
+                  >
+                    {bagian.nama}
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+              </Fragment>
+            ))}
+          </BreadcrumbList>
+        </Breadcrumb>
 
-      <div>
-        <h1 className="text-xl font-semibold leading-snug tracking-tight text-tinta sm:text-2xl">
-          {item.nama}
-        </h1>
-        <p className="mt-1 text-sm text-redup">
-          {jenisBerkas(item.mime, false)} · {formatUkuran(item.ukuran)} ·
-          diubah {formatTanggalJam(item.diubahPada)}
-        </p>
+        <header className="space-y-2">
+          <h1 className="text-2xl font-semibold leading-snug tracking-tight text-balance">
+            {item.nama}
+          </h1>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted-foreground">
+            <Badge variant="secondary">{jenisBerkas(item.mime, false)}</Badge>
+            <span className="tabular-nums">{formatUkuran(item.ukuran)}</span>
+            <span aria-hidden="true" className="text-border">
+              |
+            </span>
+            <span className="tabular-nums">
+              Diubah {formatTanggalJam(item.diubahPada)}
+            </span>
+          </div>
+        </header>
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        <a
-          href={item.tautanLihat ?? `https://drive.google.com/file/d/${item.id}/view`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex min-h-11 items-center rounded-sm bg-navy px-4 text-sm font-semibold text-white transition-colors hover:bg-navy/90"
+      <div className="flex flex-wrap gap-2">
+        <Button
+          nativeButton={false}
+          render={
+            <a
+              href={
+                item.tautanLihat ??
+                `https://drive.google.com/file/d/${item.id}/view`
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+            />
+          }
         >
+          <ExternalLinkIcon />
           Buka di Google Drive
-        </a>
+        </Button>
+
         {!asliGoogle ? (
-          <a
-            href={tautanUnduh(item.id)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex min-h-11 items-center rounded-sm border border-navy px-4 text-sm font-semibold text-navy transition-colors hover:bg-navy-lembut"
+          <Button
+            variant="outline"
+            nativeButton={false}
+            render={
+              <a
+                href={tautanUnduh(item.id)}
+                target="_blank"
+                rel="noopener noreferrer"
+              />
+            }
           >
+            <DownloadIcon />
             Unduh berkas
-          </a>
+          </Button>
         ) : null}
+
         {induk ? (
-          <Link
-            href={`/dashboard/folder/${induk.id}`}
-            className="inline-flex min-h-11 items-center rounded-sm border border-garis px-4 text-sm font-medium text-tinta transition-colors hover:bg-kertas-tinggi"
+          <Button
+            variant="ghost"
+            nativeButton={false}
+            render={<Link href={`/dashboard/folder/${induk.id}`} />}
           >
+            <ArrowLeftIcon />
             Kembali ke {induk.nama}
-          </Link>
+          </Button>
         ) : null}
       </div>
 
-      <section>
-        <h2 className="text-sm font-semibold text-tinta">Pratinjau</h2>
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold">Pratinjau</h2>
         {bisaDipratinjau(item.mime) ? (
-          <div className="mt-3 border-l-[3px] border-navy bg-kertas-tinggi">
+          <div className="overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
             <iframe
               src={tautanPratinjau(item.id)}
               title={`Pratinjau ${item.nama}`}
@@ -127,35 +190,39 @@ export default async function HalamanDokumen({
             />
           </div>
         ) : (
-          <p className="mt-3 border-l-[3px] border-garis bg-kertas-tinggi px-4 py-6 text-sm leading-relaxed text-redup">
-            Jenis berkas ini tidak bisa ditampilkan di dalam halaman. Pakai
-            tombol unduh, atau buka berkasnya langsung di Google Drive.
-          </p>
+          <Empty className="border border-dashed border-border bg-card/70">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <FileQuestionIcon />
+              </EmptyMedia>
+              <EmptyTitle>Jenis berkas ini tidak bisa dipratinjau</EmptyTitle>
+              <EmptyDescription>
+                Pakai tombol unduh, atau buka berkasnya langsung di Google
+                Drive.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         )}
       </section>
 
-      <section>
-        <h2 className="text-sm font-semibold text-tinta">Rincian</h2>
-        <dl className="mt-3 divide-y divide-garis border-l-[3px] border-navy bg-kertas-tinggi text-sm">
-          {[
-            { label: "Nama berkas", nilai: item.nama },
-            { label: "Jenis", nilai: jenisBerkas(item.mime, false) },
-            { label: "Ukuran", nilai: formatUkuran(item.ukuran) },
-            { label: "Terakhir diubah", nilai: formatTanggalJam(item.diubahPada) },
-            { label: "Folder induk", nilai: induk ? induk.nama : "Akar arsip" },
-            { label: "ID berkas di Drive", nilai: item.id },
-          ].map((baris) => (
-            <div
-              key={baris.label}
-              className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6"
-            >
-              <dt className="shrink-0 text-redup">{baris.label}</dt>
-              <dd className="break-words text-tinta sm:text-right">
-                {baris.nilai}
-              </dd>
-            </div>
-          ))}
-        </dl>
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold">Rincian</h2>
+        <div className="overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
+          <Table>
+            <TableBody>
+              {rincian.map((baris) => (
+                <TableRow key={baris.label} className="hover:bg-transparent">
+                  <TableCell className="w-40 whitespace-normal px-4 py-3 align-top text-muted-foreground sm:w-52">
+                    {baris.label}
+                  </TableCell>
+                  <TableCell className="whitespace-normal px-4 py-3 break-words">
+                    {baris.nilai}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </section>
     </div>
   )
