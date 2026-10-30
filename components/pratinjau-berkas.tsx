@@ -74,11 +74,16 @@ export function PratinjauBerkas({
         <DialogPrimitive.Popup className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-neutral-950 outline-none">
           {berkas ? <IsiPratinjau key={berkas.id} berkas={berkas} /> : null}
 
+          {/* Tombol tutup sengaja putih pekat dengan teks navy: latar penampil
+              hampir hitam, jadi bidang terang inilah yang paling kontras.
+              Garis tipis gelap + bayangan menjaga tepinya tetap terbaca kalau
+              kebetulan berada di atas halaman dokumen yang putih. */}
           <DialogPrimitive.Close
             aria-label="Tutup pratinjau"
-            className="absolute top-3 right-3 z-10 grid size-10 place-items-center rounded-full bg-black/55 text-white backdrop-blur-sm transition-colors outline-none hover:bg-black/80 focus-visible:ring-2 focus-visible:ring-white/70"
+            className="absolute top-3 right-3 z-20 inline-flex h-11 items-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-primary shadow-[0_4px_16px_rgba(0,0,0,0.35)] ring-1 ring-black/15 transition-colors outline-none hover:bg-neutral-100 focus-visible:ring-2 focus-visible:ring-primary"
           >
-            <XIcon className="size-5" aria-hidden="true" />
+            <XIcon className="size-4.5" aria-hidden="true" />
+            Tutup
           </DialogPrimitive.Close>
         </DialogPrimitive.Popup>
       </DialogPrimitive.Portal>

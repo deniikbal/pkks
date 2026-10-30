@@ -29,23 +29,3 @@ export function KepalaPublik() {
     </header>
   )
 }
-
-export function KakiPublik() {
-  return (
-    <footer className="border-t border-border bg-muted/40">
-      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-        <div className="flex items-center gap-2.5">
-          <span className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground">
-            <ArchiveIcon className="size-4" aria-hidden="true" />
-          </span>
-          <span className="text-sm font-semibold">Arsip PKKS</span>
-        </div>
-        <p className="mt-3 max-w-md text-sm leading-relaxed text-muted-foreground">
-          SMA Negeri 1 Bantarujeg, Kabupaten Majalengka. Daftar dokumen ini
-          mengikuti isi Google Drive sekolah; berkas aslinya tidak disalin ke
-          aplikasi.
-        </p>
-      </div>
-    </footer>
-  )
-}

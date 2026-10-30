@@ -4,7 +4,7 @@ import { ArrowLeftIcon, FolderIcon, FolderTreeIcon } from "lucide-react"
 
 import { DaftarDokumen } from "@/components/daftar-dokumen-publik"
 import { KartuBagian, pecahNama } from "@/components/publik-daftar"
-import { KakiPublik, KepalaPublik } from "@/components/publik-kerangka"
+import { KepalaPublik } from "@/components/publik-kerangka"
 import { Button } from "@/components/ui/button"
 import {
   Breadcrumb,
@@ -62,7 +62,6 @@ export default async function HalamanArsipPublik({
             </EmptyContent>
           </Empty>
         </main>
-        <KakiPublik />
       </div>
     )
   }
@@ -70,7 +69,11 @@ export default async function HalamanArsipPublik({
   const anak = items.filter((i) => i.indukId === folder.id)
   const subfolder = anak.filter((i) => i.folder)
   const berkas = anak.filter((i) => !i.folder)
-  const remah = jalurKe(folder, peta)
+  // Folder akar ("PKKS 2026") tidak ditampilkan di remah roti. Pembaca datang
+  // dari halaman "Arsip", jadi langkah perantara itu hanya menambah satu klik
+  // yang tidak berguna — kecuali kalau folder akar itu sendiri yang dibuka.
+  const jalur = jalurKe(folder, peta)
+  const remah = jalur.length > 1 ? jalur.filter((b) => b.indukId !== null) : jalur
 
   const keturunan = hitungKeturunan(items)
 
@@ -199,8 +202,6 @@ export default async function HalamanArsipPublik({
           ) : null}
         </div>
       </main>
-
-      <KakiPublik />
     </div>
   )
 }
