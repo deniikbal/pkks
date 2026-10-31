@@ -1,7 +1,12 @@
 "use client"
 
-import { useActionState } from "react"
-import { CircleAlertIcon, LogInIcon } from "lucide-react"
+import { useActionState, useState } from "react"
+import {
+  CircleAlertIcon,
+  EyeIcon,
+  EyeOffIcon,
+  LogInIcon,
+} from "lucide-react"
 
 import { aksiMasuk, type KeadaanMasuk } from "@/app/actions"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -14,6 +19,7 @@ const keadaanAwal: KeadaanMasuk = { galat: null }
 
 export function FormMasuk() {
   const [keadaan, kirim, sedangKirim] = useActionState(aksiMasuk, keadaanAwal)
+  const [sandiTerlihat, setSandiTerlihat] = useState(false)
 
   return (
     <form action={kirim} noValidate>
@@ -34,15 +40,35 @@ export function FormMasuk() {
 
         <Field>
           <FieldLabel htmlFor="sandi">Kata sandi</FieldLabel>
-          <Input
-            id="sandi"
-            name="sandi"
-            type="password"
-            autoComplete="current-password"
-            required
-            aria-invalid={keadaan.galat ? true : undefined}
-            className="h-11 text-base md:text-base"
-          />
+          <div className="relative">
+            <Input
+              id="sandi"
+              name="sandi"
+              type={sandiTerlihat ? "text" : "password"}
+              autoComplete="current-password"
+              required
+              aria-invalid={keadaan.galat ? true : undefined}
+              className="h-11 pr-12 text-base md:text-base"
+            />
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              aria-label={
+                sandiTerlihat ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"
+              }
+              aria-pressed={sandiTerlihat}
+              aria-controls="sandi"
+              onClick={() => setSandiTerlihat((lihat) => !lihat)}
+              className="absolute inset-y-0 right-1.5 my-auto rounded-md text-muted-foreground hover:text-foreground aria-pressed:text-foreground"
+            >
+              {sandiTerlihat ? (
+                <EyeOffIcon className="size-[18px]" />
+              ) : (
+                <EyeIcon className="size-[18px]" />
+              )}
+            </Button>
+          </div>
         </Field>
 
         {keadaan.galat ? (
