@@ -228,10 +228,30 @@ export type HasilSinkron = {
   jumlahItem: number
   jumlahFolder: number
   totalByte: number
+  idLog: string | null
 }
+
+// Kegagalan sinkronisasi tetap membawa id baris log, supaya bilah progres di
+// dasbor tahu baris mana yang harus dibaca saat menampilkan pesan galat.
+export class GalatSinkron extends Error {
+  readonly idLog: string | null
+  constructor(pesan: string, idLog: string | null) {
+    super(pesan)
+    this.name = "GalatSinkron"
+    this.idLog = idLog
+  }
+}
+
+// Tahap penelusuran yang bisa ditampilkan di dasbor. Urutannya memang begini:
+// token -> akar -> jelajah (berulang per folder) -> rapikan -> selesai.
+export type TahapSinkron = "token" | "akar" | "jelajah" | "rapikan" | "selesai"
 
 // Menelusuri folder akar beserta subfoldernya, lalu menyimpan metadatanya.
 // Isi berkas tidak diunduh: halaman ini hanya menampilkan daftar.
+//
+// Kemajuan ditulis ke baris log selama proses berjalan (bukan hanya di akhir),
+// supaya dasbor bisa menampilkan progres lewat /api/sinkron/status. Penulisan
+// dibatasi tiap ~0,4 detik agar tidak menambah beban ke database.
 export async function sinkronkanDrive(oleh: string): Promise<HasilSinkron> {
   const status = statusSumber()
   if (!status.siap) throw new Error(status.pesan)
@@ -239,18 +259,51 @@ export async function sinkronkanDrive(oleh: string): Promise<HasilSinkron> {
   // Baris log dibuat sebelum token diminta, supaya kegagalan saat mengambil
   // token pun tetap tercatat dan bisa dilihat di halaman arsip.
   const log = await satu<{ id: string }>(
-    "insert into sinkron_log (oleh) values ($1) returning id::text",
+    `insert into sinkron_log (oleh, tahap, folder_total, perkiraan_total)
+     values (
+       $1, 'token', 1,
+       coalesce((select jumlah_folder from sinkron_log
+                  where status = 'sukses' order by mulai desc limit 1), 0)
+     )
+     returning id::text`,
     [oleh]
   )
   const logId = log?.id
-  const waktuMulai = new Date()
+
+  // Penanda waktu diambil dari database, bukan dari Date() di Node: nilai ini
+  // dipakai untuk memangkas item yang tak ditemukan lagi, sementara kolom
+  // disinkron_pada diisi now() oleh Postgres. Dua jam berbeda = pemangkasan
+  // yang salah.
+  const waktuMulaiDb =
+    (
+      await satu<{ sekarang: string }>("select now()::text as sekarang")
+    )?.sekarang ?? new Date().toISOString()
 
   let jumlahItem = 0
   let jumlahFolder = 0
   let totalByte = 0
+  let folderSelesai = 0
+  let folderTotal = 1
+  let tulisTerakhir = 0
+
+  async function catatKemajuan(tahap: TahapSinkron, paksa = false) {
+    if (!logId) return
+    const sekarang = Date.now()
+    if (!paksa && sekarang - tulisTerakhir < 400) return
+    tulisTerakhir = sekarang
+    await query(
+      `update sinkron_log
+          set tahap = $2, folder_selesai = $3, folder_total = $4,
+              jumlah_item = $5, jumlah_folder = $6, total_byte = $7,
+              diperbarui = now()
+        where id = $1`,
+      [logId, tahap, folderSelesai, folderTotal, jumlahItem, jumlahFolder, totalByte]
+    )
+  }
 
   try {
     const token = await tokenAkses()
+    await catatKemajuan("akar", true)
     const akar = await metadataItem(status.folderId, token)
 
     // Akar disimpan juga supaya remah roti (breadcrumb) punya titik awal.
@@ -264,7 +317,11 @@ export async function sinkronkanDrive(oleh: string): Promise<HasilSinkron> {
     while (antrean.length > 0 && jumlahItem < BATAS_ITEM) {
       const sekarang = antrean.shift()
       if (!sekarang) break
-      if (sekarang.kedalaman >= BATAS_KEDALAMAN) continue
+      if (sekarang.kedalaman >= BATAS_KEDALAMAN) {
+        folderSelesai += 1
+        await catatKemajuan("jelajah")
+        continue
+      }
 
       const isi = await anakFolder(sekarang.id, token)
 
@@ -279,45 +336,66 @@ export async function sinkronkanDrive(oleh: string): Promise<HasilSinkron> {
           folder
         )
         jumlahItem += 1
+        if (jumlahItem === 1) await catatKemajuan("jelajah", true)
         if (folder) {
           jumlahFolder += 1
+          folderTotal += 1
           antrean.push({ id: item.id, kedalaman: sekarang.kedalaman + 1 })
         } else {
           totalByte += Number(item.size ?? 0)
         }
       }
+
+      folderSelesai += 1
+      await catatKemajuan("jelajah")
     }
+
+    await catatKemajuan("rapikan", true)
 
     // Item yang tidak muncul lagi di penelusuran ini ditandai tidak aktif,
     // bukan dihapus, supaya jejak arsipnya masih bisa ditelusuri.
+    //
+    // Folder akar dikecualikan: ia tidak pernah ditemukan lewat anakFolder()
+    // (penelusuran dimulai dari dalamnya), jadi tanpa pengecualian ini setiap
+    // sinkron akan menonaktifkannya dan beranda kehilangan seluruh kartu
+    // bagiannya.
+    //
+    // Waktu pembanding diambil dari jam database, bukan dari Date() di Node.
+    // disinkron_pada diisi now() oleh Postgres, jadi membandingkannya dengan
+    // jam proses bisa salah kalau zona waktu atau jam kedua mesin berbeda.
     await query(
-      "update drive_item set aktif = false where disinkron_pada < $1",
-      [waktuMulai]
+      `update drive_item
+          set aktif = false
+        where disinkron_pada < $1
+          and id <> $2`,
+      [waktuMulaiDb, akar.id]
     )
 
     if (logId) {
       await query(
         `update sinkron_log
             set selesai = now(), jumlah_item = $2, jumlah_folder = $3,
-                total_byte = $4, status = 'sukses'
+                total_byte = $4, status = 'sukses', tahap = 'selesai',
+                folder_selesai = $5, folder_total = $5, perkiraan_total = $5
           where id = $1`,
-        [logId, jumlahItem, jumlahFolder, totalByte]
+        [logId, jumlahItem, jumlahFolder, totalByte, folderTotal]
       )
     }
 
-    return { jumlahItem, jumlahFolder, totalByte }
+    return { jumlahItem, jumlahFolder, totalByte, idLog: logId ?? null }
   } catch (galat) {
     const pesan = galat instanceof Error ? galat.message : "Gagal sinkron."
     if (logId) {
       await query(
         `update sinkron_log
             set selesai = now(), jumlah_item = $2, jumlah_folder = $3,
-                total_byte = $4, status = 'gagal', galat = $5
+                total_byte = $4, status = 'gagal', galat = $5,
+                folder_selesai = $6, folder_total = $7
           where id = $1`,
-        [logId, jumlahItem, jumlahFolder, totalByte, pesan.slice(0, 500)]
+        [logId, jumlahItem, jumlahFolder, totalByte, pesan.slice(0, 500), folderSelesai, folderTotal]
       )
     }
-    throw galat
+    throw new GalatSinkron(pesan, logId ?? null)
   }
 }
 

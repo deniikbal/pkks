@@ -67,7 +67,34 @@ create table if not exists sinkron_log (
   status        text not null default 'jalan'
                 check (status in ('jalan', 'sukses', 'gagal')),
   galat         text,
-  oleh          text
+  oleh          text,
+  -- Kemajuan penelusuran Drive, ditulis berkala selama status masih 'jalan'
+  -- supaya halaman dasbor bisa menampilkan progres tanpa menebak-nebak.
+  -- tahap: 'token' -> 'akar' -> 'jelajah' -> 'rapikan' -> 'selesai'.
+  tahap         text,
+  folder_selesai integer not null default 0,
+  folder_total   integer not null default 0
 );
 
 create index if not exists idx_sinkron_mulai on sinkron_log (mulai desc);
+
+-- Kolom kemajuan sinkronisasi ditambahkan belakangan; `create table if not
+-- exists` di atas tidak menyentuh tabel yang sudah ada, jadi ditambahkan di
+-- sini agar `npm run migrate` tetap aman dijalankan berulang.
+alter table sinkron_log add column if not exists tahap text;
+alter table sinkron_log
+  add column if not exists folder_selesai integer not null default 0;
+alter table sinkron_log
+  add column if not exists folder_total integer not null default 0;
+
+-- Perkiraan jumlah folder untuk menghitung persen kemajuan. Diisi dari jumlah
+-- folder sinkron terakhir yang sukses saat baris baru dibuat, karena total
+-- sebenarnya baru pasti setelah penelusuran usai. Lihat catatan di
+-- app/api/sinkron/status/route.ts.
+alter table sinkron_log
+  add column if not exists perkiraan_total integer not null default 0;
+
+-- Waktu kemajuan terakhir ditulis, untuk membedakan proses yang masih hidup
+-- dari baris 'jalan' yang tertinggal karena prosesnya mati.
+alter table sinkron_log
+  add column if not exists diperbarui timestamptz;

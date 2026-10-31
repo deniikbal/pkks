@@ -3,13 +3,9 @@ import { CalendarClockIcon, FilesIcon, InfoIcon } from "lucide-react"
 import { KartuBagian, type BerkasTampil } from "@/components/publik-daftar"
 import { KepalaPublik } from "@/components/publik-kerangka"
 import { PencarianArsip } from "@/components/pencarian-arsip"
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
 import { akarDari, ambilRingkasan, ambilSemuaItem, hitungKeturunan } from "@/lib/data"
 import { statusSumber } from "@/lib/drive"
 import { formatTanggalJam } from "@/lib/format"
@@ -49,6 +45,7 @@ export default async function BerandaPublik({
   }))
 
   const adaData = ringkasan.jumlahBerkas + ringkasan.jumlahFolder > 0
+  const adaBagian = bagian.length > 0
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -61,48 +58,83 @@ export default async function BerandaPublik({
         <section className="mx-auto flex w-full max-w-6xl flex-col px-4 pb-10 pt-7 sm:px-6 lg:h-[calc(100dvh-4rem-1px)] lg:min-h-[540px] lg:pb-8">
           <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-2">
             <div>
-              <p className="flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-aksen">
+              <Badge
+                variant="outline"
+                className="gap-2 border-transparent bg-transparent px-0 text-[11px] font-semibold uppercase tracking-[0.18em] text-aksen"
+              >
                 <span aria-hidden="true" className="h-px w-6 bg-aksen/40" />
                 Arsip terbuka
-              </p>
+              </Badge>
               <h1 className="mt-2 text-[clamp(1.35rem,2.4vw,1.9rem)] font-semibold leading-tight tracking-tight text-balance">
                 Dokumen Penilaian Kinerja Kepala Sekolah
               </h1>
             </div>
+          </div>
 
-            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-              <FilesIcon className="size-4" aria-hidden="true" />
+          {/* Ringkasan isi arsip: tiga angka yang dibaca sekilas sebelum
+              memilih bagian. Dipisah garis tegak, bukan kartu terpisah, supaya
+              tetap satu baris dengan judul. */}
+          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-muted-foreground">
+            <Badge variant="secondary" className="h-6 gap-1.5 px-2 font-normal">
+              <FilesIcon className="size-3.5" aria-hidden="true" />
               {angka.format(ringkasan.jumlahBerkas)} berkas
-              <span aria-hidden="true" className="text-border">
-                ·
-              </span>
+            </Badge>
+
+            <Separator orientation="vertical" className="hidden h-3.5! sm:block" />
+
+            <Badge variant="secondary" className="h-6 gap-1.5 px-2 font-normal">
+              <FilesIcon className="size-3.5" aria-hidden="true" />
               {angka.format(ringkasan.jumlahFolder)} folder
-              <span aria-hidden="true" className="hidden text-border sm:inline">
-                ·
-              </span>
-              <span className="hidden items-center gap-1.5 sm:inline-flex">
-                <CalendarClockIcon className="size-4" aria-hidden="true" />
-                {formatTanggalJam(ringkasan.diperbaruiPada)}
-              </span>
-            </p>
+            </Badge>
+
+            <Separator orientation="vertical" className="hidden h-3.5! sm:block" />
+
+            <Badge
+              variant="secondary"
+              className="hidden h-6 gap-1.5 px-2 font-normal sm:inline-flex"
+            >
+              <CalendarClockIcon className="size-3.5" aria-hidden="true" />
+              {formatTanggalJam(ringkasan.diperbaruiPada)}
+            </Badge>
           </div>
 
           {!sumber.siap || !adaData ? (
             <div className="mt-5 flex min-h-0 flex-1 flex-col">
-              <Empty className="border border-dashed border-border bg-muted/60">
-                <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <InfoIcon />
-                  </EmptyMedia>
-                  <EmptyTitle className="text-base">
-                    Arsip belum bisa ditampilkan
-                  </EmptyTitle>
-                  <EmptyDescription>
-                    Daftar dokumen belum tersinkron dari Google Drive sekolah.
-                    Hubungi admin sekolah untuk menjalankan sinkronisasi.
-                  </EmptyDescription>
-                </EmptyHeader>
-              </Empty>
+              <Alert
+                variant="destructive"
+                className="border border-dashed border-border bg-muted/60"
+              >
+                <InfoIcon />
+                <AlertTitle>Arsip belum bisa ditampilkan</AlertTitle>
+                <AlertDescription>
+                  Daftar dokumen belum tersinkron dari Google Drive sekolah.
+                  Hubungi admin sekolah untuk menjalankan sinkronisasi. Begitu
+                  sinkronisasi jalan, empat bagian penilaian dan pencarian akan
+                  muncul di sini.
+                </AlertDescription>
+              </Alert>
+            </div>
+          ) : !adaBagian ? (
+            /* Ada isi di arsip, tapi tidak satu pun bagian langsung di bawah
+               folder akar yang bisa ditemukan. Ini terjadi kalau folder akar
+               sendiri tidak aktif atau PKKS_DRIVE_FOLDER_ID tidak cocok dengan
+               baris mana pun — tanpa pesan ini halaman tampak kosong begitu
+               saja dan sebabnya tidak terlihat. */
+            <div className="mt-5 flex min-h-0 flex-1 flex-col">
+              <Alert
+                variant="destructive"
+                className="border border-dashed border-border bg-muted/60"
+              >
+                <InfoIcon />
+                <AlertTitle>Bagian penilaian tidak ditemukan</AlertTitle>
+                <AlertDescription>
+                  Arsip berisi {angka.format(ringkasan.jumlahBerkas)} berkas,
+                  tetapi tidak ada bagian yang bisa ditampilkan di bawah folder
+                  akar. Folder akar kemungkinan sudah tidak aktif atau tidak
+                  cocok dengan pengaturan PKKS_DRIVE_FOLDER_ID. Jalankan
+                  sinkronisasi ulang dari dasbor admin.
+                </AlertDescription>
+              </Alert>
             </div>
           ) : (
             <PencarianArsip awal={kata} daftar={daftarBerkas}>

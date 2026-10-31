@@ -16,6 +16,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import {
+  Item,
+  ItemDescription,
+  ItemGroup,
+  ItemMedia,
+} from "@/components/ui/item"
 import type { ItemDrive } from "@/lib/data"
 import { cn } from "@/lib/utils"
 
@@ -72,18 +79,22 @@ export function KartuBagian({
         )}
       >
         <div className="flex items-start justify-between gap-4">
-          <span
+          <ItemMedia
+            variant="icon"
             className={cn(
-              "grid shrink-0 place-items-center bg-background text-muted-foreground/60",
+              "bg-background text-muted-foreground/60",
               ringkas ? "size-10 rounded-lg" : "size-11 rounded-xl"
             )}
           >
             <Ikon className="size-5" aria-hidden="true" />
-          </span>
+          </ItemMedia>
           {nomor ? (
-            <span className="text-sm font-semibold tabular-nums text-muted-foreground/40">
+            <Badge
+              variant="ghost"
+              className="px-0 text-sm font-semibold tabular-nums text-muted-foreground/40"
+            >
               {nomor}
-            </span>
+            </Badge>
           ) : null}
         </div>
         <div>
@@ -114,18 +125,22 @@ export function KartuBagian({
       >
         <CardHeader>
           <div className="flex items-start justify-between gap-4">
-            <span
+            <ItemMedia
+              variant="icon"
               className={cn(
-                "grid shrink-0 place-items-center bg-aksen-lembut text-aksen",
+                "bg-aksen-lembut text-aksen",
                 ringkas ? "size-10 rounded-lg" : "size-11 rounded-xl"
               )}
             >
               <Ikon className="size-5" aria-hidden="true" />
-            </span>
+            </ItemMedia>
             {nomor ? (
-              <span className="text-sm font-semibold tabular-nums text-aksen/70">
+              <Badge
+                variant="ghost"
+                className="px-0 text-sm font-semibold tabular-nums text-aksen/70"
+              >
                 {nomor}
-              </span>
+              </Badge>
             ) : null}
           </div>
 
@@ -146,12 +161,13 @@ export function KartuBagian({
           )}
         >
           {contoh.length > 0 ? (
-            <ul className={ringkas ? "space-y-1" : "space-y-1.5"}>
+            <ItemGroup className={ringkas ? "gap-1" : "gap-1.5"}>
               {contoh.map((sub) => (
-                <li
+                <Item
                   key={sub.id}
+                  size="xs"
                   className={cn(
-                    "flex min-w-0 items-start gap-2 text-muted-foreground",
+                    "min-w-0 items-start gap-2 border-transparent px-0 py-0 text-muted-foreground",
                     ringkas ? "text-xs" : "text-sm"
                   )}
                 >
@@ -162,24 +178,35 @@ export function KartuBagian({
                       ringkas ? "mt-[6px]" : "mt-[7px]"
                     )}
                   />
-                  <span className="line-clamp-2">{pecahNama(sub.nama).judul}</span>
-                </li>
+                  <ItemDescription className="min-w-0 line-clamp-2 text-muted-foreground">
+                    {pecahNama(sub.nama).judul}
+                  </ItemDescription>
+                </Item>
               ))}
               {sisa > 0 ? (
-                <li className="pl-3 text-xs text-muted-foreground/80">
-                  +{sisa} subfolder lain
-                </li>
+                <Item size="xs" className="border-transparent py-0 pl-3 text-xs">
+                  <ItemDescription className="text-muted-foreground/80">
+                    +{sisa} subfolder lain
+                  </ItemDescription>
+                </Item>
               ) : null}
-            </ul>
+            </ItemGroup>
           ) : (
-            <p className="text-xs text-muted-foreground">
-              Berkas langsung di bagian ini.
-            </p>
+            <Item size="xs" className="border-transparent px-0 text-xs">
+              <ItemDescription className="text-muted-foreground">
+                Berkas langsung di bagian ini.
+              </ItemDescription>
+            </Item>
           )}
 
+          {/* Ajakan ini bukan kontrol tersendiri: seluruh kartu sudah menjadi
+              <Link>, jadi menaruh <button> di dalamnya menghasilkan kontrol
+              bersarang (HTML tidak valid + membingungkan pembaca layar).
+              Teks biasa bergaya aksen sudah cukup — klik di mana pun pada kartu
+              tetap membuka bagiannya. */}
           <span
             className={cn(
-              "inline-flex items-center gap-1.5 font-medium text-aksen",
+              "inline-flex items-center gap-1.5 self-start font-medium text-aksen",
               ringkas ? "text-xs" : "text-sm"
             )}
           >

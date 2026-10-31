@@ -11,7 +11,7 @@ import {
   penggunaSaatIni,
   terlaluBanyakCoba,
 } from "@/lib/auth"
-import { sinkronkanDrive } from "@/lib/drive"
+import { GalatSinkron, sinkronkanDrive } from "@/lib/drive"
 
 export type KeadaanMasuk = { galat: string | null }
 
@@ -50,19 +50,26 @@ export async function aksiKeluar(): Promise<void> {
   redirect("/login")
 }
 
-export type KeadaanSinkron = { pesan: string | null; jenis: "sukses" | "gagal" | null }
+export type KeadaanSinkron = {
+  pesan: string | null
+  jenis: "sukses" | "gagal" | null
+  // Id baris sinkron_log milik proses ini. Dipakai bilah progres untuk
+  // menanyakan kemajuan ke /api/sinkron/status selama proses berjalan.
+  idLog: string | null
+}
 export async function aksiSinkron(
   _keadaanSebelumnya: KeadaanSinkron,
   _data: FormData
 ): Promise<KeadaanSinkron> {
   const pengguna = await penggunaSaatIni()
   if (!pengguna) {
-    return { pesan: "Sesi sudah berakhir. Masuk ulang dulu.", jenis: "gagal" }
+    return { pesan: "Sesi sudah berakhir. Masuk ulang dulu.", jenis: "gagal", idLog: null }
   }
   if (pengguna.peran !== "admin") {
     return {
       pesan: "Hanya admin yang boleh menjalankan sinkronisasi.",
       jenis: "gagal",
+      idLog: null,
     }
   }
 
@@ -72,6 +79,7 @@ export async function aksiSinkron(
     return {
       pesan: `Sinkron selesai: ${hasil.jumlahItem} berkas, ${hasil.jumlahFolder} folder.`,
       jenis: "sukses",
+      idLog: hasil.idLog,
     }
   } catch (galat) {
     return {
@@ -80,6 +88,7 @@ export async function aksiSinkron(
           ? `Sinkron gagal: ${galat.message}`
           : "Sinkron gagal tanpa keterangan.",
       jenis: "gagal",
+      idLog: galat instanceof GalatSinkron ? galat.idLog : null,
     }
   }
 }

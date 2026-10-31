@@ -203,7 +203,12 @@ export default async function Dasbor({
                 <p className="text-sm text-muted-foreground">
                   Ambil ulang daftar berkas dari Google Drive sekolah.
                 </p>
-                <TombolSinkron boleh={sumber.siap} />
+                <TombolSinkron
+                  boleh={sumber.siap}
+                  idBerjalan={
+                    log?.status === "jalan" ? log.id : null
+                  }
+                />
               </CardContent>
             </Card>
           ) : null}

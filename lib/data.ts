@@ -165,7 +165,10 @@ export async function ambilRingkasan(): Promise<Ringkasan> {
   }
 }
 
+export type TahapSinkron = "token" | "akar" | "jelajah" | "rapikan" | "selesai"
+
 export type LogSinkron = {
+  id: string
   mulai: string
   selesai: string | null
   jumlahItem: number
@@ -174,10 +177,25 @@ export type LogSinkron = {
   status: "jalan" | "sukses" | "gagal"
   galat: string | null
   oleh: string | null
+  tahap: TahapSinkron | null
+  folderSelesai: number
+  folderTotal: number
+  perkiraanTotal: number
+  /** Waktu kemajuan terakhir ditulis; null sebelum penulisan pertama. */
+  diperbarui: string | null
 }
 
 export async function ambilLogTerakhir(): Promise<LogSinkron | null> {
+  return ambilLogMilik(null)
+}
+
+// Dipakai dua tempat: dasbor (log terakhir) dan endpoint kemajuan
+// /api/sinkron/status, yang mengambil satu baris tertentu berdasarkan id.
+export async function ambilLogMilik(
+  id: string | null
+): Promise<LogSinkron | null> {
   const baris = await satu<{
+    id: string
     mulai: string
     selesai: string | null
     jumlah_item: number
@@ -186,23 +204,49 @@ export async function ambilLogTerakhir(): Promise<LogSinkron | null> {
     status: "jalan" | "sukses" | "gagal"
     galat: string | null
     oleh: string | null
+    tahap: TahapSinkron | null
+    folder_selesai: number
+    folder_total: number
+    perkiraan_total: number
+    diperbarui: string | null
   }>(
-    `select mulai::text, selesai::text, jumlah_item, jumlah_folder,
-            total_byte::text, status, galat, oleh
+    `select id::text, mulai::text, selesai::text, jumlah_item, jumlah_folder,
+            total_byte::text, status, galat, oleh, tahap,
+            folder_selesai, folder_total, perkiraan_total, diperbarui::text
        from sinkron_log
+      ${id ? "where id = $1" : ""}
       order by mulai desc
-      limit 1`
+      limit 1`,
+    id ? [id] : []
   )
 
   if (!baris) return null
+
+  // Baris 'jalan' yang tidak bergerak lama berasal dari proses yang mati di
+  // tengah jalan (server restart, proses dibunuh). Kemajuan ditulis paling
+  // lambat tiap ~0,4 detik, jadi hening 10 menit berarti prosesnya sudah tidak
+  // ada — jangan biarkan dasbor menampilkan bilah yang berputar selamanya.
+  const BASI_MS = 10 * 60 * 1000
+  const basi =
+    baris.status === "jalan" &&
+    Date.now() - Date.parse(baris.diperbarui ?? baris.mulai) > BASI_MS
+
   return {
+    id: baris.id,
     mulai: baris.mulai,
     selesai: baris.selesai,
     jumlahItem: baris.jumlah_item,
     jumlahFolder: baris.jumlah_folder,
     totalByte: Number(baris.total_byte),
-    status: baris.status,
-    galat: baris.galat,
+    status: basi ? "gagal" : baris.status,
+    galat: basi
+      ? "Sinkron berhenti tanpa penutup (proses terhenti). Jalankan ulang."
+      : baris.galat,
     oleh: baris.oleh,
+    tahap: baris.tahap,
+    folderSelesai: baris.folder_selesai,
+    folderTotal: baris.folder_total,
+    perkiraanTotal: baris.perkiraan_total,
+    diperbarui: baris.diperbarui,
   }
 }
