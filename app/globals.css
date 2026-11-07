@@ -33,14 +33,33 @@
   --color-aksen-lembut: #e4f2ef;
 
   /*
-    Bayangan kartu: dua lapis tipis (kontak + sebar), bukan satu bayangan
-    tebal. Lapisan pertama menempelkan kartu ke halaman, lapisan kedua
-    mengangkatnya sedikit. Satu lapisan tebal akan terlihat seperti tombol.
+    Warna bagian: satu warna tenang per bagian penilaian, seperti tab folder
+    arsip berwarna. Sengaja dibatasi empat warna yang semuanya disamakan
+    terang-gelapnya (±55% lightness) dan kejenuhannya rendah, supaya terbaca
+    sebagai satu keluarga, bukan pelangi. Dipakai hanya sebagai garis tepi
+    kartu dan latar ubin nomor — bukan untuk mewarnai teks isi.
+    Hindari ungu-indigo gradien dan neon: itu bahasa visual template, bukan
+    arsip sekolah.
+  */
+  --color-bagian-a: #1f6f8b; /* biru laut */
+  --color-bagian-a-lembut: #e8f2f6;
+  --color-bagian-b: #2a6f50; /* hijau daun */
+  --color-bagian-b-lembut: #e9f4ee;
+  --color-bagian-c: #94541f; /* sienna */
+  --color-bagian-c-lembut: #f8efe6;
+  --color-bagian-d: #6d5a8e; /* lembayung kelabu, bukan ungu neon */
+  --color-bagian-d-lembut: #f0edf5;
+
+  /*
+    Bayangan kartu: dua lapis (kontak rapat + sebar lebar). Karena latar
+    halaman hampir putih, bayangan inilah yang memisahkan kartu dari latar —
+    bukan beda warna. Karena itu lapisan sebar dibuat cukup lebar dan gelap
+    supaya kartu terlihat mengambang, bukan menempel.
   */
   --shadow-kartu:
-    0 1px 2px rgb(16 24 40 / 0.06), 0 6px 16px -4px rgb(16 24 40 / 0.12);
+    0 1px 2px rgb(16 24 40 / 0.08), 0 10px 24px -6px rgb(16 24 40 / 0.16);
   --shadow-kartu-naik:
-    0 2px 4px rgb(16 24 40 / 0.07), 0 14px 28px -8px rgb(16 24 40 / 0.18);
+    0 3px 6px rgb(16 24 40 / 0.10), 0 20px 38px -10px rgb(16 24 40 / 0.26);
 }
 
 @theme inline {
@@ -90,7 +109,7 @@
     di atasnya benar-benar terpisah. Selisih lama (#f7f5f0 vs #fffdf9) terlalu
     kecil: di layar laptop kartu nyaris menyatu dengan halaman.
   */
-  --background: #fbfaf7;
+  --background: #f4f5f7;
   --foreground: #101828;
 
   --card: #ffffff;
@@ -106,7 +125,10 @@
   --secondary-foreground: #14264a;
 
   --muted: #f2f0ea;
-  --muted-foreground: #4a5568;
+  /* Abu-abu sekunder digelapkan dari #4a5568: halaman ini dibaca orang tua
+     di layar ponsel dan proyektor ruang rapat. Semua teks kecil memakai token
+     ini, jadi kontrasnya harus lolos AA dengan lapang, bukan pas-pasan. */
+  --muted-foreground: #3d4756;
 
   --accent: #e7ecf6;
   --accent-foreground: #14264a;

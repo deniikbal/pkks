@@ -75,7 +75,7 @@ export function PencarianArsip({
         onSubmit={(e) => e.preventDefault()}
         className="w-full"
       >
-        <InputGroup className="h-12 w-full bg-card shadow-sm">
+        <InputGroup className="h-13 w-full bg-card shadow-sm">
           <InputGroupAddon aria-hidden="true">
             <SearchIcon />
           </InputGroupAddon>
@@ -90,7 +90,7 @@ export function PencarianArsip({
             enterKeyHint="search"
             autoComplete="off"
             spellCheck={false}
-            className="h-12 text-base md:text-base"
+            className="h-13 text-base md:text-base"
           />
 
           <InputGroupAddon align="inline-end" className="gap-1">
@@ -105,7 +105,7 @@ export function PencarianArsip({
                 <XIcon />
               </InputGroupButton>
             ) : null}
-            <InputGroupButton type="submit" variant="secondary" size="sm">
+            <InputGroupButton type="submit" variant="secondary" size="sm" className="h-9 px-4 text-sm font-semibold">
               Cari
             </InputGroupButton>
           </InputGroupAddon>
@@ -123,17 +123,17 @@ export function PencarianArsip({
           <>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">
+                <span className="font-semibold text-foreground">
                   {terpotong
                     ? `${BATAS_HASIL} dari ${hasil.length}`
                     : hasil.length}
                 </span>{" "}
                 hasil cocok dengan{" "}
-                <span className="font-medium text-foreground">
+                <span className="font-semibold text-foreground">
                   &ldquo;{bersih}&rdquo;
                 </span>
               </p>
-              <Button variant="ghost" size="sm" onClick={() => setKata("")}>
+              <Button variant="ghost" size="sm" className="text-sm" onClick={() => setKata("")}>
                 Hapus pencarian
               </Button>
             </div>

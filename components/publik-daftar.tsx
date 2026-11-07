@@ -12,7 +12,6 @@ import {
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
@@ -26,13 +25,20 @@ import {
 import type { ItemDrive } from "@/lib/data"
 import { cn } from "@/lib/utils"
 
-// Nama folder di Drive sudah bernomor ("1.1 Manajerial"). Nomornya dipakai
-// sebagai penanda visual, judulnya dibersihkan supaya tidak dobel.
+// Nama folder di Drive sudah bernomor. Dua pola yang dipakai arsip ini:
+// "A. Kepribadian" (huruf bagian) dan "A.1   Integritas" / "1.1 Manajerial"
+// (subfolder). Keduanya diurai jadi nomor penanda + judul bersih, supaya
+// nomornya tidak tampil dua kali (di ubin dan di judul).
 export function pecahNama(nama: string): { nomor: string | null; judul: string } {
-  const cocok = nama.match(/^(\d+(?:\.\d+)*)\.?\s+(.+)$/)
-  return cocok
-    ? { nomor: cocok[1], judul: cocok[2] }
-    : { nomor: null, judul: nama }
+  // Awalan huruf bagian atau angka bertingkat, boleh diikuti nomor subfolder
+  // ("A", "A.1", "1.1"), lalu judulnya. Spasi dirapatkan supaya
+  // "A.1   Integritas" (spasi ganda dari Drive) tidak menyisakan celah lebar.
+  const cocok = nama.match(/^([A-Za-z]|\d+(?:\.\d+)*)(?:\.\d+)*\.?\s+(.+)$/)
+  if (!cocok) return { nomor: null, judul: nama }
+  return {
+    nomor: cocok[1].toUpperCase(),
+    judul: cocok[2].replace(/\s+/g, " ").trim(),
+  }
 }
 
 // Ikon dipilih dari kata kunci nama bagian, dengan fallback folder biasa.
@@ -44,6 +50,50 @@ export function ikonBagian(nama: string): LucideIcon {
   if (n.includes("wirausaha")) return SproutIcon
   if (n.includes("pancawaluya")) return CompassIcon
   return FolderIcon
+}
+
+// Warna bagian dipilih dari nomor bagian (A/B/C/D). Bagian tanpa nomor tetap
+// memakai aksen teal bawaan. Nilainya adalah nama token Tailwind yang sudah
+// didefinisikan di globals.css, bukan warna mentah, supaya tema tetap satu
+// sumber. Dipakai hanya untuk garis tepi kartu dan ubin nomor.
+function warnaBagian(nomor: string | null) {
+  switch (nomor) {
+    case "A":
+      return {
+        tepi: "border-bagian-a",
+        ubin: "bg-bagian-a-lembut text-bagian-a",
+        titik: "bg-bagian-a",
+        teks: "text-bagian-a",
+      }
+    case "B":
+      return {
+        tepi: "border-bagian-b",
+        ubin: "bg-bagian-b-lembut text-bagian-b",
+        titik: "bg-bagian-b",
+        teks: "text-bagian-b",
+      }
+    case "C":
+      return {
+        tepi: "border-bagian-c",
+        ubin: "bg-bagian-c-lembut text-bagian-c",
+        titik: "bg-bagian-c",
+        teks: "text-bagian-c",
+      }
+    case "D":
+      return {
+        tepi: "border-bagian-d",
+        ubin: "bg-bagian-d-lembut text-bagian-d",
+        titik: "bg-bagian-d",
+        teks: "text-bagian-d",
+      }
+    default:
+      return {
+        tepi: "border-border",
+        ubin: "bg-aksen-lembut text-aksen",
+        titik: "bg-aksen",
+        teks: "text-aksen",
+      }
+  }
 }
 
 export function KartuBagian({
@@ -60,6 +110,7 @@ export function KartuBagian({
 }) {
   const { nomor, judul } = pecahNama(item.nama)
   const Ikon = ikonBagian(item.nama)
+  const warna = warnaBagian(nomor)
   const contoh = subfolder.slice(0, 3)
   const sisa = subfolder.length - contoh.length
 
@@ -73,7 +124,8 @@ export function KartuBagian({
         className={cn(
           // Bagian kosong dibuat sebagai "lubang" (abu-abu tenggelam, garis
           // putus-putus) supaya beda jelas dengan kartu berisi yang putih dan
-          // terangkat.
+          // terangkat. Garis tepinya tetap memakai warna bagian, dipudarkan,
+          // supaya masih terlihat bagian mana ini.
           "flex flex-col gap-4 rounded-xl border border-dashed border-border bg-muted/70 p-4",
           ringkas ? "h-full" : "self-start"
         )}
@@ -82,7 +134,7 @@ export function KartuBagian({
           <ItemMedia
             variant="icon"
             className={cn(
-              "bg-background text-muted-foreground/60",
+              "bg-background text-muted-foreground",
               ringkas ? "size-10 rounded-lg" : "size-11 rounded-xl"
             )}
           >
@@ -91,7 +143,7 @@ export function KartuBagian({
           {nomor ? (
             <Badge
               variant="ghost"
-              className="px-0 text-sm font-semibold tabular-nums text-muted-foreground/40"
+              className="px-0 text-sm font-semibold tabular-nums text-muted-foreground"
             >
               {nomor}
             </Badge>
@@ -100,13 +152,13 @@ export function KartuBagian({
         <div>
           <p
             className={cn(
-              "font-medium leading-snug text-muted-foreground",
-              ringkas ? "text-base" : "text-lg"
+              "font-semibold leading-snug text-muted-foreground",
+              ringkas ? "text-lg" : "text-xl"
             )}
           >
             {judul}
           </p>
-          <p className="mt-1 text-xs text-muted-foreground/80">
+          <p className="mt-1 text-sm text-muted-foreground">
             Belum ada dokumen di bagian ini.
           </p>
         </div>
@@ -121,37 +173,62 @@ export function KartuBagian({
     >
       <Card
         size={ringkas ? "sm" : "default"}
-        className="h-full gap-0 transition-[background-color,box-shadow] group-hover/card:bg-muted/40 group-hover/card:shadow-kartu-naik group-hover/card:ring-aksen/35"
+        className={cn(
+          // Garis tepi berwarna per bagian, bukan abu-abu seragam. Ketebalan
+          // 1px tetap; warnanya yang membedakan, seperti tab folder arsip.
+          // shadow-sm sengaja dibuang: kartu dasar sudah memakai shadow-kartu
+          // (dua lapis) yang lebih jelas. ring tipis juga dimatikan karena
+          // garis tepi berwarna sudah jadi batasnya — dua garis tipis sekaligus
+          // membuat tepi terlihat kotor.
+          "h-full gap-0 border-2 shadow-kartu ring-0 transition-[background-color,box-shadow,border-color] group-hover/card:bg-muted/40 group-hover/card:shadow-kartu-naik",
+          warna.tepi
+        )}
       >
         <CardHeader>
+          {/* Baris atas: penanda nomor bagian sebagai ubin, hitungan isi di
+              kanan. Hitungan di sini dibaca lebih dulu daripada daftar contoh,
+              jadi ia yang berdiri sejajar nomor, bukan judul. */}
           <div className="flex items-start justify-between gap-4">
             <ItemMedia
               variant="icon"
               className={cn(
-                "bg-aksen-lembut text-aksen",
+                warna.ubin,
                 ringkas ? "size-10 rounded-lg" : "size-11 rounded-xl"
               )}
             >
-              <Ikon className="size-5" aria-hidden="true" />
+              {nomor ? (
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "font-bold tabular-nums",
+                    ringkas ? "text-base" : "text-lg"
+                  )}
+                >
+                  {nomor}
+                </span>
+              ) : (
+                <Ikon className="size-5" aria-hidden="true" />
+              )}
             </ItemMedia>
-            {nomor ? (
-              <Badge
-                variant="ghost"
-                className="px-0 text-sm font-semibold tabular-nums text-aksen/70"
-              >
-                {nomor}
-              </Badge>
-            ) : null}
+
+            <span
+              className={cn(
+                "shrink-0 text-right tabular-nums text-muted-foreground",
+                ringkas ? "text-sm" : "text-sm"
+              )}
+            >
+              {subfolder.length} subfolder · {jumlahBerkas} berkas
+            </span>
           </div>
 
           <CardTitle
-            className={cn("tracking-tight", ringkas ? "mt-3" : "mt-4 text-lg")}
+            className={cn(
+              "tracking-tight",
+              ringkas ? "mt-3 text-2xl" : "mt-4 text-2xl"
+            )}
           >
             {judul}
           </CardTitle>
-          <CardDescription className={ringkas ? "text-xs" : "text-sm"}>
-            {subfolder.length} subfolder · {jumlahBerkas} berkas
-          </CardDescription>
         </CardHeader>
 
         <CardContent
@@ -161,38 +238,45 @@ export function KartuBagian({
           )}
         >
           {contoh.length > 0 ? (
-            <ItemGroup className={ringkas ? "gap-1" : "gap-1.5"}>
+            <ItemGroup className={ringkas ? "gap-1.5" : "gap-2"}>
               {contoh.map((sub) => (
                 <Item
                   key={sub.id}
                   size="xs"
                   className={cn(
-                    "min-w-0 items-start gap-2 border-transparent px-0 py-0 text-muted-foreground",
-                    ringkas ? "text-xs" : "text-sm"
+                    // flex-nowrap membatalkan flex-wrap bawaan Item: tanpa ini,
+                    // judul panjang menolak menyusut lalu didorong ke baris flex
+                    // berikutnya sehingga jatuh di bawah butir, bukan di sampingnya.
+                    "min-w-0 flex-nowrap items-start gap-2.5 border-transparent px-0 py-0 text-sm text-muted-foreground"
                   )}
                 >
+                  {/* Butir disejajarkan dengan baris pertama teks, bukan tengah
+                      seluruh paragraf: items-center pada kotak setinggi satu
+                      baris (leading-normal + text-sm = 1.5em). Tetap sejajar
+                      walau judul dua baris atau ukuran font berubah. */}
                   <span
                     aria-hidden="true"
-                    className={cn(
-                      "size-1 shrink-0 rounded-full bg-aksen/40",
-                      ringkas ? "mt-[6px]" : "mt-[7px]"
-                    )}
-                  />
-                  <ItemDescription className="min-w-0 line-clamp-2 text-muted-foreground">
+                    className="flex h-[1.5em] shrink-0 items-center"
+                  >
+                    <span className={cn("size-1.5 rounded-full", warna.titik)} />
+                  </span>
+                  {/* flex-1 membuat teks mengambil sisa lebar lalu membungkus di
+                      dalam kolomnya sendiri, tidak mendorong baris flex baru. */}
+                  <ItemDescription className="min-w-0 flex-1 line-clamp-2 leading-normal text-muted-foreground">
                     {pecahNama(sub.nama).judul}
                   </ItemDescription>
                 </Item>
               ))}
               {sisa > 0 ? (
-                <Item size="xs" className="border-transparent py-0 pl-3 text-xs">
-                  <ItemDescription className="text-muted-foreground/80">
+                <Item size="xs" className="border-transparent py-0 pl-3.5 text-sm">
+                  <ItemDescription className="text-muted-foreground">
                     +{sisa} subfolder lain
                   </ItemDescription>
                 </Item>
               ) : null}
             </ItemGroup>
           ) : (
-            <Item size="xs" className="border-transparent px-0 text-xs">
+            <Item size="xs" className="border-transparent px-0 text-sm">
               <ItemDescription className="text-muted-foreground">
                 Berkas langsung di bagian ini.
               </ItemDescription>
@@ -206,13 +290,14 @@ export function KartuBagian({
               tetap membuka bagiannya. */}
           <span
             className={cn(
-              "inline-flex items-center gap-1.5 self-start font-medium text-aksen",
-              ringkas ? "text-xs" : "text-sm"
+              "inline-flex items-center gap-1.5 self-start font-semibold",
+              warna.teks,
+              ringkas ? "text-sm" : "text-base"
             )}
           >
             Lihat isi bagian
             <ArrowRightIcon
-              className="size-4 transition-transform group-hover/card:translate-x-0.5"
+              className="size-4.5 transition-transform group-hover/card:translate-x-0.5"
               aria-hidden="true"
             />
           </span>

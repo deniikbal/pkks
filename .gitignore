@@ -37,3 +37,6 @@ Thumbs.db
 .idea/
 *.launch.json
 *.code-workspace
+
+# Screenshot/diagnostik sementara
+.tmp-shots/

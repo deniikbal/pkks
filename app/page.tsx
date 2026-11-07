@@ -1,11 +1,9 @@
-import { CalendarClockIcon, FilesIcon, InfoIcon } from "lucide-react"
+import { InfoIcon } from "lucide-react"
 
 import { KartuBagian, type BerkasTampil } from "@/components/publik-daftar"
 import { KepalaPublik } from "@/components/publik-kerangka"
 import { PencarianArsip } from "@/components/pencarian-arsip"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
 import { akarDari, ambilRingkasan, ambilSemuaItem, hitungKeturunan } from "@/lib/data"
 import { statusSumber } from "@/lib/drive"
 import { formatTanggalJam } from "@/lib/format"
@@ -55,48 +53,64 @@ export default async function BerandaPublik({
           halaman, lalu empat bagian penilaian. Tidak ada bagian lain di bawah
           lipatan — begitu kartu terlihat, halaman selesai. */}
       <main className="flex flex-1 flex-col">
-        <section className="mx-auto flex w-full max-w-6xl flex-col px-4 pb-10 pt-7 sm:px-6 lg:h-[calc(100dvh-4rem-1px)] lg:min-h-[540px] lg:pb-8">
-          <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-2">
+        <section className="mx-auto flex w-full max-w-7xl flex-col px-4 pb-12 pt-8 sm:px-6 lg:px-10">
+          {/* Judul dan catatan waktu sinkron: judul di kiri, waktu di kanan
+              sebagai teks tenang supaya jam tidak berebut perhatian dengan
+              judul halaman. */}
+          <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
             <div>
-              <Badge
-                variant="outline"
-                className="gap-2 border-transparent bg-transparent px-0 text-[11px] font-semibold uppercase tracking-[0.18em] text-aksen"
-              >
-                <span aria-hidden="true" className="h-px w-6 bg-aksen/40" />
+              <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-aksen">
+                <span aria-hidden="true" className="h-px w-6 bg-aksen/60" />
                 Arsip terbuka
-              </Badge>
-              <h1 className="mt-2 text-[clamp(1.35rem,2.4vw,1.9rem)] font-semibold leading-tight tracking-tight text-balance">
+              </p>
+              <h1 className="mt-2 text-[clamp(1.7rem,3.2vw,2.25rem)] font-bold leading-tight tracking-tight text-balance">
                 Dokumen Penilaian Kinerja Kepala Sekolah
               </h1>
             </div>
+
+            <p className="flex flex-col items-end text-right leading-tight">
+              <span className="text-[13px] text-muted-foreground">
+                Terakhir disinkronkan
+              </span>
+              <span className="mt-0.5 text-base font-semibold tabular-nums">
+                {formatTanggalJam(ringkasan.diperbaruiPada)}
+              </span>
+            </p>
           </div>
 
-          {/* Ringkasan isi arsip: tiga angka yang dibaca sekilas sebelum
-              memilih bagian. Dipisah garis tegak, bukan kartu terpisah, supaya
-              tetap satu baris dengan judul. */}
-          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-muted-foreground">
-            <Badge variant="secondary" className="h-6 gap-1.5 px-2 font-normal">
-              <FilesIcon className="size-3.5" aria-hidden="true" />
-              {angka.format(ringkasan.jumlahBerkas)} berkas
-            </Badge>
+          {/* Kalimat pengantar bahasa sehari-hari: siapa yang boleh membaca,
+              apa isinya, dan harus mulai dari mana. Orang tua yang membuka
+              tautan ini tidak tahu istilah "PKKS", jadi halaman harus
+              menjelaskannya sendiri, bukan mengandalkan judul. */}
+          <p className="mt-4 max-w-3xl text-base leading-relaxed text-muted-foreground">
+            Halaman ini memuat dokumen penilaian kinerja kepala sekolah yang
+            bisa dibaca siapa saja. Anda tidak perlu masuk atau punya akun. Pilih
+            salah satu bagian di bawah, atau ketik nama dokumen pada kotak
+            pencarian.
+          </p>
 
-            <Separator orientation="vertical" className="hidden h-3.5! sm:block" />
-
-            <Badge variant="secondary" className="h-6 gap-1.5 px-2 font-normal">
-              <FilesIcon className="size-3.5" aria-hidden="true" />
-              {angka.format(ringkasan.jumlahFolder)} folder
-            </Badge>
-
-            <Separator orientation="vertical" className="hidden h-3.5! sm:block" />
-
-            <Badge
-              variant="secondary"
-              className="hidden h-6 gap-1.5 px-2 font-normal sm:inline-flex"
-            >
-              <CalendarClockIcon className="size-3.5" aria-hidden="true" />
-              {formatTanggalJam(ringkasan.diperbaruiPada)}
-            </Badge>
-          </div>
+          {/* Ringkasan isi arsip: satu bilah angka. Angka besar dibaca
+              sekilas, labelnya kecil; dipisah garis tegak, bukan tiga kartu
+              terpisah, supaya tetap terbaca sebagai satu kesatuan. */}
+          <dl className="mt-6 flex flex-wrap items-center rounded-xl border border-border bg-card shadow-sm">
+            {[
+              { label: "Berkas dokumen", nilai: ringkasan.jumlahBerkas },
+              { label: "Folder terkelola", nilai: ringkasan.jumlahFolder },
+              { label: "Bagian penilaian", nilai: bagian.length },
+            ].map((s, i) => (
+              <div
+                key={s.label}
+                className="flex flex-1 basis-40 items-baseline gap-3 border-border px-5 py-4 not-last:border-r"
+              >
+                <dt className="order-2 text-sm text-muted-foreground">
+                  {s.label}
+                </dt>
+                <dd className="order-1 text-3xl font-bold tabular-nums">
+                  {angka.format(s.nilai)}
+                </dd>
+              </div>
+            ))}
+          </dl>
 
           {!sumber.siap || !adaData ? (
             <div className="mt-5 flex min-h-0 flex-1 flex-col">
@@ -138,8 +152,15 @@ export default async function BerandaPublik({
             </div>
           ) : (
             <PencarianArsip awal={kata} daftar={daftarBerkas}>
-              <h2 className="sr-only">Empat bagian penilaian</h2>
-              <div className="grid gap-4 sm:grid-cols-2 lg:min-h-0 lg:flex-1 lg:grid-rows-2">
+              <div className="mt-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <h2 className="text-sm font-bold uppercase tracking-[0.12em] text-foreground">
+                  Empat bagian penilaian
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Pilih bagian untuk melihat isinya
+                </p>
+              </div>
+              <div className="mt-3 grid gap-4 sm:grid-cols-2">
                 {bagian.map((b) => (
                   <KartuBagian
                     key={b.id}

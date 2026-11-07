@@ -32,10 +32,13 @@ function KartuStatistik({
   label,
   nilai,
   ikon,
+  catatan,
 }: {
   label: string
   nilai: string
   ikon: React.ReactNode
+  /** Baris kecil di bawah angka untuk rincian turunan, mis. "12 kosong". */
+  catatan?: string
 }) {
   return (
     <Card size="sm" className="gap-1.5">
@@ -49,6 +52,9 @@ function KartuStatistik({
         <CardTitle className="text-lg font-semibold tracking-tight tabular-nums">
           {nilai}
         </CardTitle>
+        {catatan ? (
+          <p className="text-xs text-muted-foreground">{catatan}</p>
+        ) : null}
       </CardHeader>
     </Card>
   )
@@ -80,6 +86,15 @@ export default async function Dasbor({
   const folderPuncak = akar
     ? items.filter((i) => i.folder && i.indukId === akar.id)
     : items.filter((i) => i.folder && !i.indukId)
+
+  // Folder tanpa isi apa pun (tidak ada berkas, tidak ada subfolder). Memakai
+  // peta jumlahAnak yang sudah dihitung di atas, jadi tidak ada query tambahan.
+  const folderKosong = items.filter(
+    (i) =>
+      i.folder &&
+      !jumlahAnak.get(i.id)?.folder &&
+      !jumlahAnak.get(i.id)?.berkas
+  ).length
 
   const berkasTerbaru = items
     .filter((i) => !i.folder)
@@ -174,6 +189,11 @@ export default async function Dasbor({
               label="Folder"
               nilai={angka.format(ringkasan.jumlahFolder)}
               ikon={<FolderTreeIcon aria-hidden="true" />}
+              catatan={
+                folderKosong > 0
+                  ? `${angka.format(folderKosong)} kosong`
+                  : undefined
+              }
             />
             <KartuStatistik
               label="Ukuran"
@@ -199,16 +219,21 @@ export default async function Dasbor({
 
           {admin ? (
             <Card size="sm">
-              <CardContent className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm text-muted-foreground">
-                  Ambil ulang daftar berkas dari Google Drive sekolah.
-                </p>
+              {/* Tombol dan kemajuannya ditumpuk tegak, bukan berdampingan:
+                  panel kemajuan punya beberapa baris angka yang perlu lebar
+                  penuh agar tidak terhimpit di samping tombol. */}
+              <CardContent className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-sm text-muted-foreground">
+                    Ambil ulang daftar berkas dari Google Drive sekolah.
+                  </p>
                 <TombolSinkron
                   boleh={sumber.siap}
                   idBerjalan={
                     log?.status === "jalan" ? log.id : null
                   }
                 />
+                </div>
               </CardContent>
             </Card>
           ) : null}
