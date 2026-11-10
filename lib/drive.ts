@@ -274,7 +274,9 @@ export async function sinkronkanDrive(oleh: string): Promise<HasilSinkron> {
     await simpanItem(akar, null, 0)
     jumlahFolder += 1
 
-    const antrean: Array<{ id: string; kedalaman: number }> = [{ id: akar.id, kedalaman: 0 }]
+    const antrean: Array<{ id: string; kedalaman: number; indukTampil?: string }> = [
+      { id: akar.id, kedalaman: 0 },
+    ]
 
     while (antrean.length > 0 && jumlahItem < BATAS_ITEM) {
       const sekarang = antrean.shift()
@@ -287,19 +289,34 @@ export async function sinkronkanDrive(oleh: string): Promise<HasilSinkron> {
 
       const isi = await anakFolder(sekarang.id, token)
 
+      // Anak disimpan dengan induk sebagaimana tampil di aplikasi: kalau
+      // folder yang sedang dibuka adalah tujuan sebuah shortcut, anak-anaknya
+      // dipasang di bawah ID shortcut itu, bukan di bawah folder tujuan,
+      // supaya halaman /arsip/<id-shortcut> menampilkan isinya.
+      const indukSimpan = sekarang.indukTampil ?? sekarang.id
+
       for (const item of isi) {
         if (jumlahItem >= BATAS_ITEM) break
-        // Shortcut ke folder juga dianggap folder
-        const folder = isFolder(item) || isShortcut(item)
-        await simpanItem(item, sekarang.id, sekarang.kedalaman + 1, folder)
+        // Shortcut ke folder dianggap folder; shortcut ke file tetap berkas.
+        const folder =
+          isFolder(item) ||
+          (isShortcut(item) &&
+            item.shortcutDetails?.targetMimeType ===
+              "application/vnd.google-apps.folder")
+        await simpanItem(item, indukSimpan, sekarang.kedalaman + 1, folder)
         jumlahItem += 1
         if (jumlahItem === 1) await catatKemajuan("jelajah", true)
         if (folder) {
           jumlahFolder += 1
           folderTotal += 1
-          // Untuk shortcut, gunakan targetId sebagai ID yang akan ditelusuri
+          // Untuk shortcut, telusuri folder tujuannya, tetapi isi hasil
+          // penelusuran ditampilkan di bawah shortcut itu sendiri.
           const idUntukDitelusuri = item.shortcutDetails?.targetId ?? item.id
-          antrean.push({ id: idUntukDitelusuri, kedalaman: sekarang.kedalaman + 1 })
+          antrean.push({
+            id: idUntukDitelusuri,
+            kedalaman: sekarang.kedalaman + 1,
+            indukTampil: item.shortcutDetails ? item.id : undefined,
+          })
         } else {
           totalByte += Number(item.size ?? 0)
         }
@@ -343,8 +360,13 @@ function dapatkanLink(item: MetadataDrive): string | null {
   if (isFolder(item)) {
     return item.webViewLink ?? null
   }
-  if (isShortcut(item) && item.shortcutDetails?.targetId) {
-    return `https://drive.google.com/drive/u/0/folder?id=${item.shortcutDetails.targetId}`
+  // Shortcut: pakai webViewLink bawaan shortcut (sudah membuka tujuannya).
+  // Kalau tidak ada, susun link folder dari targetId untuk shortcut folder.
+  if (isShortcut(item)) {
+    if (item.webViewLink) return item.webViewLink
+    if (item.shortcutDetails?.targetId) {
+      return `https://drive.google.com/drive/u/0/folders/${item.shortcutDetails.targetId}`
+    }
   }
   return item.webViewLink ?? null
 }
