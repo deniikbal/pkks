@@ -21,6 +21,10 @@ type MetadataDrive = {
   size?: string
   modifiedTime?: string
   webViewLink?: string
+  shortcutDetails?: {
+    targetId?: string
+    targetMimeType?: string
+  }
   thumbnailLink?: string
 }
 
@@ -73,8 +77,7 @@ export function statusSumber(): StatusSumber {
     siap: false,
     cara: "belum-diisi",
     folderId,
-    pesan:
-      "Kredensial Google Drive belum diisi, jadi data dokumen belum bisa diambil.",
+    pesan: "Kredensial Google Drive belum diisi, jadi data dokumen belum bisa diambil.",
   }
 }
 
@@ -167,7 +170,7 @@ async function metadataItem(id: string, token: string): Promise<MetadataDrive> {
   const url = new URL(`https://www.googleapis.com/drive/v3/files/${id}`)
   url.searchParams.set(
     "fields",
-    "id,name,mimeType,size,modifiedTime,webViewLink,thumbnailLink"
+    "id,name,mimeType,size,modifiedTime,webViewLink,shortcutDetails,thumbnailLink"
   )
   url.searchParams.set("supportsAllDrives", "true")
   return ambilJson<MetadataDrive>(url.toString(), token)
@@ -185,7 +188,7 @@ async function anakFolder(
     url.searchParams.set("q", `'${idFolder}' in parents and trashed = false`)
     url.searchParams.set(
       "fields",
-      "nextPageToken,files(id,name,mimeType,size,modifiedTime,webViewLink,thumbnailLink)"
+      "nextPageToken,files(id,name,mimeType,size,modifiedTime,webViewLink,shortcutDetails,thumbnailLink)"
     )
     url.searchParams.set("pageSize", "1000")
     url.searchParams.set("orderBy", "folder,name")
@@ -212,10 +215,7 @@ export async function ujiKoneksiDrive(): Promise<{ ok: boolean; pesan: string }>
   try {
     const token = await tokenAkses()
     const akar = await metadataItem(status.folderId, token)
-    return {
-      ok: true,
-      pesan: `Terhubung ke folder "${akar.name}".`,
-    }
+    return { ok: true, pesan: `Terhubung ke folder "${akar.name}".` }
   } catch (galat) {
     return {
       ok: false,
@@ -231,8 +231,6 @@ export type HasilSinkron = {
   idLog: string | null
 }
 
-// Kegagalan sinkronisasi tetap membawa id baris log, supaya bilah progres di
-// dasbor tahu baris mana yang harus dibaca saat menampilkan pesan galat.
 export class GalatSinkron extends Error {
   readonly idLog: string | null
   constructor(pesan: string, idLog: string | null) {
@@ -242,42 +240,16 @@ export class GalatSinkron extends Error {
   }
 }
 
-// Tahap penelusuran yang bisa ditampilkan di dasbor. Urutannya memang begini:
-// token -> akar -> jelajah (berulang per folder) -> rapikan -> selesai.
 export type TahapSinkron = "token" | "akar" | "jelajah" | "rapikan" | "selesai"
 
-// Menelusuri folder akar beserta subfoldernya, lalu menyimpan metadatanya.
-// Isi berkas tidak diunduh: halaman ini hanya menampilkan daftar.
-//
-// Kemajuan ditulis ke baris log selama proses berjalan (bukan hanya di akhir),
-// supaya dasbor bisa menampilkan progres lewat /api/sinkron/status. Penulisan
-// dibatasi tiap ~0,4 detik agar tidak menambah beban ke database.
 export async function sinkronkanDrive(oleh: string): Promise<HasilSinkron> {
   const status = statusSumber()
   if (!status.siap) throw new Error(status.pesan)
 
-  // Baris log dibuat sebelum token diminta, supaya kegagalan saat mengambil
-  // token pun tetap tercatat dan bisa dilihat di halaman arsip.
-  const log = await satu<{ id: string }>(
-    `insert into sinkron_log (oleh, tahap, folder_total, perkiraan_total)
-     values (
-       $1, 'token', 1,
-       coalesce((select jumlah_folder from sinkron_log
-                  where status = 'sukses' order by mulai desc limit 1), 0)
-     )
-     returning id::text`,
-    [oleh]
-  )
+  const log = await satu<{ id: string }>(`insert into sinkron_log (oleh, tahap, folder_total, perkiraan_total) values ($1, 'token', 1, coalesce((select jumlah_folder from sinkron_log where status = 'sukses' order by mulai desc limit 1), 0)) returning id::text`, [oleh])
   const logId = log?.id
 
-  // Penanda waktu diambil dari database, bukan dari Date() di Node: nilai ini
-  // dipakai untuk memangkas item yang tak ditemukan lagi, sementara kolom
-  // disinkron_pada diisi now() oleh Postgres. Dua jam berbeda = pemangkasan
-  // yang salah.
-  const waktuMulaiDb =
-    (
-      await satu<{ sekarang: string }>("select now()::text as sekarang")
-    )?.sekarang ?? new Date().toISOString()
+  const waktuMulaiDb = (await satu<{ sekarang: string }>("select now()::text as sekarang"))?.sekarang ?? new Date().toISOString()
 
   let jumlahItem = 0
   let jumlahFolder = 0
@@ -291,14 +263,7 @@ export async function sinkronkanDrive(oleh: string): Promise<HasilSinkron> {
     const sekarang = Date.now()
     if (!paksa && sekarang - tulisTerakhir < 400) return
     tulisTerakhir = sekarang
-    await query(
-      `update sinkron_log
-          set tahap = $2, folder_selesai = $3, folder_total = $4,
-              jumlah_item = $5, jumlah_folder = $6, total_byte = $7,
-              diperbarui = now()
-        where id = $1`,
-      [logId, tahap, folderSelesai, folderTotal, jumlahItem, jumlahFolder, totalByte]
-    )
+    await query(`update sinkron_log set tahap = $2, folder_selesai = $3, folder_total = $4, jumlah_item = $5, jumlah_folder = $6, total_byte = $7, diperbarui = now() where id = $1`, [logId, tahap, folderSelesai, folderTotal, jumlahItem, jumlahFolder, totalByte])
   }
 
   try {
@@ -306,13 +271,10 @@ export async function sinkronkanDrive(oleh: string): Promise<HasilSinkron> {
     await catatKemajuan("akar", true)
     const akar = await metadataItem(status.folderId, token)
 
-    // Akar disimpan juga supaya remah roti (breadcrumb) punya titik awal.
     await simpanItem(akar, null, 0)
     jumlahFolder += 1
 
-    const antrean: Array<{ id: string; kedalaman: number }> = [
-      { id: akar.id, kedalaman: 0 },
-    ]
+    const antrean: Array<{ id: string; kedalaman: number }> = [{ id: akar.id, kedalaman: 0 }]
 
     while (antrean.length > 0 && jumlahItem < BATAS_ITEM) {
       const sekarang = antrean.shift()
@@ -327,20 +289,17 @@ export async function sinkronkanDrive(oleh: string): Promise<HasilSinkron> {
 
       for (const item of isi) {
         if (jumlahItem >= BATAS_ITEM) break
-        const folder = item.mimeType === "application/folder"
-          || item.mimeType === "application/vnd.google-apps.folder"
-        await simpanItem(
-          item,
-          sekarang.id,
-          sekarang.kedalaman + 1,
-          folder
-        )
+        // Shortcut ke folder juga dianggap folder
+        const folder = isFolder(item) || isShortcut(item)
+        await simpanItem(item, sekarang.id, sekarang.kedalaman + 1, folder)
         jumlahItem += 1
         if (jumlahItem === 1) await catatKemajuan("jelajah", true)
         if (folder) {
           jumlahFolder += 1
           folderTotal += 1
-          antrean.push({ id: item.id, kedalaman: sekarang.kedalaman + 1 })
+          // Untuk shortcut, gunakan targetId sebagai ID yang akan ditelusuri
+          const idUntukDitelusuri = item.shortcutDetails?.targetId ?? item.id
+          antrean.push({ id: idUntukDitelusuri, kedalaman: sekarang.kedalaman + 1 })
         } else {
           totalByte += Number(item.size ?? 0)
         }
@@ -352,51 +311,42 @@ export async function sinkronkanDrive(oleh: string): Promise<HasilSinkron> {
 
     await catatKemajuan("rapikan", true)
 
-    // Item yang tidak muncul lagi di penelusuran ini ditandai tidak aktif,
-    // bukan dihapus, supaya jejak arsipnya masih bisa ditelusuri.
-    //
-    // Folder akar dikecualikan: ia tidak pernah ditemukan lewat anakFolder()
-    // (penelusuran dimulai dari dalamnya), jadi tanpa pengecualian ini setiap
-    // sinkron akan menonaktifkannya dan beranda kehilangan seluruh kartu
-    // bagiannya.
-    //
-    // Waktu pembanding diambil dari jam database, bukan dari Date() di Node.
-    // disinkron_pada diisi now() oleh Postgres, jadi membandingkannya dengan
-    // jam proses bisa salah kalau zona waktu atau jam kedua mesin berbeda.
-    await query(
-      `update drive_item
-          set aktif = false
-        where disinkron_pada < $1
-          and id <> $2`,
-      [waktuMulaiDb, akar.id]
-    )
+    await query(`update drive_item set aktif = false where disinkron_pada < $1 and id <> $2`, [waktuMulaiDb, akar.id])
 
     if (logId) {
-      await query(
-        `update sinkron_log
-            set selesai = now(), jumlah_item = $2, jumlah_folder = $3,
-                total_byte = $4, status = 'sukses', tahap = 'selesai',
-                folder_selesai = $5, folder_total = $5, perkiraan_total = $5
-          where id = $1`,
-        [logId, jumlahItem, jumlahFolder, totalByte, folderTotal]
-      )
+      await query(`update sinkron_log set selesai = now(), jumlah_item = $2, jumlah_folder = $3, total_byte = $4, status = 'sukses', tahap = 'selesai', folder_selesai = $5, folder_total = $5, perkiraan_total = $5 where id = $1`, [logId, jumlahItem, jumlahFolder, totalByte, folderTotal])
     }
 
     return { jumlahItem, jumlahFolder, totalByte, idLog: logId ?? null }
   } catch (galat) {
     const pesan = galat instanceof Error ? galat.message : "Gagal sinkron."
     if (logId) {
-      await query(
-        `update sinkron_log
-            set selesai = now(), jumlah_item = $2, jumlah_folder = $3,
-                total_byte = $4, status = 'gagal', galat = $5,
-                folder_selesai = $6, folder_total = $7
-          where id = $1`,
-        [logId, jumlahItem, jumlahFolder, totalByte, pesan.slice(0, 500), folderSelesai, folderTotal]
-      )
+      await query(`update sinkron_log set selesai = now(), jumlah_item = $2, jumlah_folder = $3, total_byte = $4, status = 'gagal', galat = $5, folder_selesai = $6, folder_total = $7 where id = $1`, [logId, jumlahItem, jumlahFolder, totalByte, pesan.slice(0, 500), folderSelesai, folderTotal])
     }
     throw new GalatSinkron(pesan, logId ?? null)
   }
+}
+
+function isFolder(item: MetadataDrive): boolean {
+  const folderTypes = [
+    "application/vnd.google-apps.folder",
+    "application/folder",
+  ] as const
+  return folderTypes.includes(item.mimeType as typeof folderTypes[number])
+}
+
+function isShortcut(item: MetadataDrive): boolean {
+  return item.mimeType === "application/vnd.google-apps.shortcut"
+}
+
+function dapatkanLink(item: MetadataDrive): string | null {
+  if (isFolder(item)) {
+    return item.webViewLink ?? null
+  }
+  if (isShortcut(item) && item.shortcutDetails?.targetId) {
+    return `https://drive.google.com/drive/u/0/folder?id=${item.shortcutDetails.targetId}`
+  }
+  return item.webViewLink ?? null
 }
 
 async function simpanItem(
@@ -405,10 +355,8 @@ async function simpanItem(
   kedalaman: number,
   folderPaksa?: boolean
 ): Promise<void> {
-  const folder =
-    folderPaksa ??
-    (item.mimeType === "application/vnd.google-apps.folder" ||
-      item.mimeType === "application/folder")
+  const folder = isFolder(item) || folderPaksa
+  const tautan = dapatkanLink(item)
 
   await query(
     `insert into drive_item
@@ -435,7 +383,7 @@ async function simpanItem(
       folder,
       item.size ? Number(item.size) : null,
       item.modifiedTime ?? null,
-      item.webViewLink ?? null,
+      tautan,
       item.thumbnailLink ?? null,
       kedalaman,
     ]
