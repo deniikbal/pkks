@@ -6,6 +6,10 @@ import { query, satu } from "./db"
 const CAKUPAN = "https://www.googleapis.com/auth/drive.readonly"
 const BATAS_ITEM = 5000
 const BATAS_KEDALAMAN = 8
+// Jumlah folder yang diambil bersamaan dari API Drive. Antrean melebar
+// (BFS), jadi dengan 8 pekerja waktu tunggu tiap respons tumpang-tindih dan
+// penelusuran jadi beberapa kali lebih cepat daripada satu per satu.
+const KONKURENSI = 8
 
 export type StatusSumber = {
   siap: boolean
@@ -274,57 +278,86 @@ export async function sinkronkanDrive(oleh: string): Promise<HasilSinkron> {
     await simpanItem(akar, null, 0)
     jumlahFolder += 1
 
-    const antrean: Array<{ id: string; kedalaman: number; indukTampil?: string }> = [
+    // Penelusuran melebar dengan beberapa pekerja paralel. Tiap pekerja
+    // mengambil isi satu folder, menyimpannya sekali jalan (insert massal),
+    // lalu mendaftarkan subfolder baru ke antrean.
+    const antrean: Array<{ id: string; kedalaman: number }> = [
       { id: akar.id, kedalaman: 0 },
     ]
+    let pekerjaJalan = 0
+    let selesaiSemua: (() => void) | null = null
+    const semuaSelesai = new Promise<void>((selesai) => {
+      selesaiSemua = selesai
+    })
 
-    while (antrean.length > 0 && jumlahItem < BATAS_ITEM) {
-      const sekarang = antrean.shift()
-      if (!sekarang) break
-      if (sekarang.kedalaman >= BATAS_KEDALAMAN) {
-        folderSelesai += 1
-        await catatKemajuan("jelajah")
-        continue
-      }
+    // Pekerja dijalankan sesuai kebutuhan: kalau antrean berisi dan masih
+    // ada jatah KONKURENSI, satu pekerja baru diluncurkan. Pekerja berhenti
+    // saat antrean kosong atau batas item tercapai; proses selesai kalau
+    // tidak ada pekerja jalan dan antrean kosong.
+    const jalankanPekerja = async () => {
+      pekerjaJalan += 1
+      try {
+        while (jumlahItem < BATAS_ITEM) {
+          const sekarang = antrean.shift()
+          if (!sekarang) break
+          if (sekarang.kedalaman >= BATAS_KEDALAMAN) {
+            folderSelesai += 1
+            await catatKemajuan("jelajah")
+            continue
+          }
 
-      const isi = await anakFolder(sekarang.id, token)
+          const isi = await anakFolder(sekarang.id, token)
 
-      // Anak disimpan dengan induk sebagaimana tampil di aplikasi: kalau
-      // folder yang sedang dibuka adalah tujuan sebuah shortcut, anak-anaknya
-      // dipasang di bawah ID shortcut itu, bukan di bawah folder tujuan,
-      // supaya halaman /arsip/<id-shortcut> menampilkan isinya.
-      const indukSimpan = sekarang.indukTampil ?? sekarang.id
+          const subfolderBaru: Array<{ id: string; kedalaman: number }> = []
+          for (const item of isi) {
+            if (jumlahItem >= BATAS_ITEM) break
+            // Shortcut ke folder dianggap folder; shortcut ke file tetap berkas.
+            const folder =
+              isFolder(item) ||
+              (isShortcut(item) &&
+                item.shortcutDetails?.targetMimeType ===
+                  "application/vnd.google-apps.folder")
+            jumlahItem += 1
+            if (folder) {
+              jumlahFolder += 1
+              folderTotal += 1
+              // Shortcut folder: isi folder tujuan ikut ditelusuri; isinya
+              // disimpan di bawah folder tujuan, halaman shortcut
+              // menampilkannya lewat kolom target_id.
+              const idTelusur =
+                item.mimeType === "application/vnd.google-apps.shortcut"
+                  ? item.shortcutDetails?.targetId ?? item.id
+                  : item.id
+              subfolderBaru.push({ id: idTelusur, kedalaman: sekarang.kedalaman + 1 })
+            } else {
+              totalByte += Number(item.size ?? 0)
+            }
+          }
 
-      for (const item of isi) {
-        if (jumlahItem >= BATAS_ITEM) break
-        // Shortcut ke folder dianggap folder; shortcut ke file tetap berkas.
-        const folder =
-          isFolder(item) ||
-          (isShortcut(item) &&
-            item.shortcutDetails?.targetMimeType ===
-              "application/vnd.google-apps.folder")
-        await simpanItem(item, indukSimpan, sekarang.kedalaman + 1, folder)
-        jumlahItem += 1
-        if (jumlahItem === 1) await catatKemajuan("jelajah", true)
-        if (folder) {
-          jumlahFolder += 1
-          folderTotal += 1
-          // Untuk shortcut, telusuri folder tujuannya, tetapi isi hasil
-          // penelusuran ditampilkan di bawah shortcut itu sendiri.
-          const idUntukDitelusuri = item.shortcutDetails?.targetId ?? item.id
-          antrean.push({
-            id: idUntukDitelusuri,
-            kedalaman: sekarang.kedalaman + 1,
-            indukTampil: item.shortcutDetails ? item.id : undefined,
-          })
-        } else {
-          totalByte += Number(item.size ?? 0)
+          // Semua isi folder ini masuk database dalam satu query.
+          if (isi.length > 0) {
+            await simpanBanyak(isi, sekarang.id, sekarang.kedalaman + 1)
+            if (folderSelesai === 0) await catatKemajuan("jelajah", true)
+          }
+
+          folderSelesai += 1
+          await catatKemajuan("jelajah")
+          antrean.push(...subfolderBaru)
+          // Ada tugas baru: isi jatah pekerja yang belum jalan.
+          while (pekerjaJalan < KONKURENSI && antrean.length > 0 && jumlahItem < BATAS_ITEM) {
+            void jalankanPekerja()
+          }
+        }
+      } finally {
+        pekerjaJalan -= 1
+        if (pekerjaJalan === 0 && (antrean.length === 0 || jumlahItem >= BATAS_ITEM)) {
+          selesaiSemua?.()
         }
       }
-
-      folderSelesai += 1
-      await catatKemajuan("jelajah")
     }
+
+    await jalankanPekerja()
+    await semuaSelesai
 
     await catatKemajuan("rapikan", true)
 
@@ -341,6 +374,70 @@ export async function sinkronkanDrive(oleh: string): Promise<HasilSinkron> {
       await query(`update sinkron_log set selesai = now(), jumlah_item = $2, jumlah_folder = $3, total_byte = $4, status = 'gagal', galat = $5, folder_selesai = $6, folder_total = $7 where id = $1`, [logId, jumlahItem, jumlahFolder, totalByte, pesan.slice(0, 500), folderSelesai, folderTotal])
     }
     throw new GalatSinkron(pesan, logId ?? null)
+  }
+}
+
+async function simpanBanyak(
+  items: MetadataDrive[],
+  indukId: string,
+  kedalamanDasar: number
+): Promise<void> {
+  // Insert massal: semua isi satu folder dalam satu query, jadi 500 berkas
+  // cukup 1 perjalanan ke database, bukan 500.
+  // PostgreSQL membatasi 65535 parameter per query. Tiap item memakai 11
+  // parameter, jadi maksimal sekitar 5.000 item per query — jauh di atas
+  // ukuran folder biasa, tapi pengaman untuk folder raksasa.
+  const MAKS_ITEM_QUERY = 5000
+  for (let awal = 0; awal < items.length; awal += MAKS_ITEM_QUERY) {
+    const potongan = items.slice(awal, awal + MAKS_ITEM_QUERY)
+    const nilai: string[] = []
+    const data: (string | number | boolean | null)[] = []
+    let nomorPotongan = 0
+
+    for (const item of potongan) {
+      const folder = isFolder(item) ||
+        (isShortcut(item) &&
+          item.shortcutDetails?.targetMimeType === "application/vnd.google-apps.folder")
+      const tautan = dapatkanLink(item)
+      const targetId = isShortcut(item) ? item.shortcutDetails?.targetId ?? null : null
+      const kolom = [
+        item.id,
+        indukId,
+        item.name,
+        item.mimeType,
+        folder,
+        item.size ? Number(item.size) : null,
+        item.modifiedTime ?? null,
+        tautan,
+        item.thumbnailLink ?? null,
+        kedalamanDasar,
+        targetId,
+      ]
+      const tempat = kolom.map(() => `$${(nomorPotongan += 1)}`).join(", ")
+      nilai.push(`(${tempat})`)
+      data.push(...kolom)
+    }
+
+    await query(
+      `insert into drive_item
+         (id, induk_id, nama, mime, folder, ukuran, diubah_pada,
+          tautan_lihat, tautan_thumb, kedalaman, target_id)
+       values ${nilai.join(", ")}
+       on conflict (id) do update
+          set induk_id = excluded.induk_id,
+              nama = excluded.nama,
+              mime = excluded.mime,
+              folder = excluded.folder,
+              ukuran = excluded.ukuran,
+              diubah_pada = excluded.diubah_pada,
+              tautan_lihat = excluded.tautan_lihat,
+              tautan_thumb = excluded.tautan_thumb,
+              kedalaman = excluded.kedalaman,
+              target_id = excluded.target_id,
+              aktif = true,
+              disinkron_pada = now()`,
+      data
+    )
   }
 }
 
@@ -379,12 +476,15 @@ async function simpanItem(
 ): Promise<void> {
   const folder = isFolder(item) || folderPaksa
   const tautan = dapatkanLink(item)
+  // ID tujuan shortcut, dipakai halaman shortcut untuk menampilkan isi
+  // folder yang ditunjuk tanpa menduplikasi data.
+  const targetId = isShortcut(item) ? item.shortcutDetails?.targetId ?? null : null
 
   await query(
     `insert into drive_item
        (id, induk_id, nama, mime, folder, ukuran, diubah_pada,
-        tautan_lihat, tautan_thumb, kedalaman, aktif, disinkron_pada)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true, now())
+        tautan_lihat, tautan_thumb, kedalaman, target_id, aktif, disinkron_pada)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, true, now())
      on conflict (id) do update
         set induk_id = excluded.induk_id,
             nama = excluded.nama,
@@ -395,6 +495,7 @@ async function simpanItem(
             tautan_lihat = excluded.tautan_lihat,
             tautan_thumb = excluded.tautan_thumb,
             kedalaman = excluded.kedalaman,
+            target_id = excluded.target_id,
             aktif = true,
             disinkron_pada = now()`,
     [
@@ -408,6 +509,7 @@ async function simpanItem(
       tautan,
       item.thumbnailLink ?? null,
       kedalaman,
+      targetId,
     ]
   )
 }

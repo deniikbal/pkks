@@ -11,6 +11,7 @@ export type ItemDrive = {
   tautanLihat: string | null
   tautanThumb: string | null
   kedalaman: number
+  targetId: string | null
 }
 
 type BarisItem = {
@@ -24,6 +25,7 @@ type BarisItem = {
   tautan_lihat: string | null
   tautan_thumb: string | null
   kedalaman: number
+  target_id: string | null
 }
 
 function petakan(baris: BarisItem): ItemDrive {
@@ -38,13 +40,14 @@ function petakan(baris: BarisItem): ItemDrive {
     tautanLihat: baris.tautan_lihat,
     tautanThumb: baris.tautan_thumb,
     kedalaman: baris.kedalaman,
+    targetId: baris.target_id ?? null,
   }
 }
 
 export async function ambilSemuaItem(): Promise<ItemDrive[]> {
   const baris = await query<BarisItem>(
     `select id, induk_id, nama, mime, folder, ukuran::text, diubah_pada,
-            tautan_lihat, tautan_thumb, kedalaman
+            tautan_lihat, tautan_thumb, kedalaman, target_id
        from drive_item
       where aktif = true
       order by folder desc, nama asc`
@@ -55,7 +58,7 @@ export async function ambilSemuaItem(): Promise<ItemDrive[]> {
 export async function ambilItem(id: string): Promise<ItemDrive | null> {
   const baris = await satu<BarisItem>(
     `select id, induk_id, nama, mime, folder, ukuran::text, diubah_pada,
-            tautan_lihat, tautan_thumb, kedalaman
+            tautan_lihat, tautan_thumb, kedalaman, target_id
        from drive_item
       where id = $1
         and aktif = true`,

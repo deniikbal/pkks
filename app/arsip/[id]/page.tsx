@@ -66,7 +66,10 @@ export default async function HalamanArsipPublik({
     )
   }
 
-  const anak = items.filter((i) => i.indukId === folder.id)
+  // Shortcut ke folder: isinya diambil dari folder tujuan (target_id),
+  // karena isi aslinya disimpan sekali di bawah folder tujuan itu.
+  const idIsi = folder.targetId ?? folder.id
+  const anak = items.filter((i) => i.indukId === idIsi)
   const subfolder = anak.filter((i) => i.folder)
   const berkas = anak.filter((i) => !i.folder)
   // Folder akar ("PKKS 2026") tidak ditampilkan di remah roti. Pembaca datang

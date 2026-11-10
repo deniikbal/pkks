@@ -48,12 +48,13 @@ create table if not exists drive_item (
   tautan_lihat    text,
   tautan_thumb    text,
   kedalaman       integer not null default 0,
+  target_id       text,
   aktif           boolean not null default true,
   disinkron_pada  timestamptz not null default now()
 );
 
 create index if not exists idx_drive_induk on drive_item (induk_id, folder, nama);
-create index if not exists idx_drive_diubah on drive_item (diubah_pada desc);
+create index if not exists idx_drive_target on drive_item (target_id);
 -- Pencarian nama memakai ILIKE, jadi indeks pola huruf kecil ini yang dipakai.
 create index if not exists idx_drive_nama on drive_item (lower(nama) text_pattern_ops);
 
