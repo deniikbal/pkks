@@ -9,6 +9,7 @@ import {
   type LucideIcon,
 } from "lucide-react"
 
+import { IndikatorMembuka } from "@/components/indikator-membuka"
 import {
   Card,
   CardContent,
@@ -169,7 +170,11 @@ export function KartuBagian({
   return (
     <Link
       href={`/arsip/${item.id}`}
-      className="group/card block h-full rounded-2xl outline-offset-4"
+      // prefetch dimatikan: kalau tidak, tautan yang sudah dipramuat membuat
+      // navigasi selesai seketika dan tanda "Membuka…" tidak pernah muncul —
+      // padahal di koneksi lambat tanda itulah yang dibutuhkan pembaca.
+      prefetch={false}
+      className="group/card relative block h-full rounded-2xl outline-offset-4"
     >
       <Card
         size={ringkas ? "sm" : "default"}
@@ -303,6 +308,7 @@ export function KartuBagian({
           </span>
         </CardContent>
       </Card>
+      <IndikatorMembuka />
     </Link>
   )
 }
