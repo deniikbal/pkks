@@ -13,6 +13,7 @@ import {
 } from "@/lib/data"
 import { statusSumber } from "@/lib/drive"
 import { formatTanggalJam } from "@/lib/format"
+import { cn } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
 
@@ -98,7 +99,7 @@ export default async function BerandaPublik({
           {/* Ringkasan isi arsip: satu bilah angka. Angka besar dibaca
               sekilas, labelnya kecil; dipisah garis tegak, bukan tiga kartu
               terpisah, supaya tetap terbaca sebagai satu kesatuan. */}
-          <dl className="mt-6 flex flex-wrap items-center rounded-xl border border-border bg-card shadow-sm">
+          <dl className="mt-6 rounded-xl border border-border bg-card shadow-sm sm:flex">
             {[
               { label: "Berkas dokumen", nilai: ringkasan.jumlahBerkas },
               { label: "Folder terkelola", nilai: ringkasan.jumlahFolder },
@@ -106,12 +107,21 @@ export default async function BerandaPublik({
             ].map((s, i) => (
               <div
                 key={s.label}
-                className="flex flex-1 basis-40 items-baseline gap-3 border-border px-5 py-4 not-last:border-r"
+                className={cn(
+                  // Ponsel: satu angka per baris, angka di kiri dan label di
+                  // kanan. Tiga angka dalam satu baris terlalu sempit — labelnya
+                  // pecah dan baris ketiga menggantung sendiri.
+                  "flex items-baseline justify-between gap-4 px-5 py-3",
+                  i > 0 && "border-t border-border",
+                  // Layar lebar: tiga angka dalam satu baris, dipisah garis tegak.
+                  "sm:flex-1 sm:justify-start sm:gap-3 sm:border-t-0 sm:py-4",
+                  i > 0 && "sm:border-l sm:border-border"
+                )}
               >
                 <dt className="order-2 text-sm text-muted-foreground">
                   {s.label}
                 </dt>
-                <dd className="order-1 text-3xl font-bold tabular-nums">
+                <dd className="order-1 text-2xl font-bold tabular-nums sm:text-3xl">
                   {angka.format(s.nilai)}
                 </dd>
               </div>
