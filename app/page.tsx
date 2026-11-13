@@ -4,7 +4,13 @@ import { KartuBagian, type BerkasTampil } from "@/components/publik-daftar"
 import { KepalaPublik } from "@/components/publik-kerangka"
 import { PencarianArsip } from "@/components/pencarian-arsip"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { akarDari, ambilRingkasan, ambilSemuaItem, hitungKeturunan } from "@/lib/data"
+import {
+  akarDari,
+  ambilRingkasan,
+  ambilSemuaItem,
+  anakDari,
+  hitungKeturunan,
+} from "@/lib/data"
 import { statusSumber } from "@/lib/drive"
 import { formatTanggalJam } from "@/lib/format"
 
@@ -23,7 +29,7 @@ export default async function BerandaPublik({
   const sumber = statusSumber()
 
   const akar = akarDari(items, process.env.PKKS_DRIVE_FOLDER_ID ?? "")
-  const bagian = akar ? items.filter((i) => i.folder && i.indukId === akar.id) : []
+  const bagian = akar ? anakDari(items, akar).filter((i) => i.folder) : []
 
   // Angka di kartu bagian menghitung seluruh isi di bawahnya, bukan hanya satu
   // lapis, supaya pembaca tahu besar kecilnya bagian sebelum membukanya.
@@ -167,9 +173,7 @@ export default async function BerandaPublik({
                     ringkas
                     item={b}
                     jumlahBerkas={keturunan.get(b.id)?.berkas ?? 0}
-                    subfolder={items.filter(
-                      (i) => i.folder && i.indukId === b.id
-                    )}
+                    subfolder={anakDari(items, b).filter((i) => i.folder)}
                   />
                 ))}
               </div>

@@ -18,6 +18,7 @@ import {
   ambilLogTerakhir,
   ambilRingkasan,
   ambilSemuaItem,
+  idIsi,
   jalurKe,
   type ItemDrive,
 } from "@/lib/data"
@@ -92,8 +93,8 @@ export default async function Dasbor({
   const folderKosong = items.filter(
     (i) =>
       i.folder &&
-      !jumlahAnak.get(i.id)?.folder &&
-      !jumlahAnak.get(i.id)?.berkas
+      !jumlahAnak.get(idIsi(i))?.folder &&
+      !jumlahAnak.get(idIsi(i))?.berkas
   ).length
 
   const berkasTerbaru = items
@@ -249,7 +250,7 @@ export default async function Dasbor({
                 <KartuFolder
                   key={folder.id}
                   item={folder}
-                  isi={jumlahAnak.get(folder.id) ?? { folder: 0, berkas: 0 }}
+                  isi={jumlahAnak.get(idIsi(folder)) ?? { folder: 0, berkas: 0 }}
                 />
               ))}
             </div>

@@ -71,6 +71,19 @@ export async function ambilItem(id: string): Promise<ItemDrive | null> {
 // yang sudah dimuat di peramban, supaya hasilnya muncul tanpa menunggu server
 // menyusun ulang halaman (1,2–2,2 detik per navigasi di app ini).
 
+// Shortcut ke folder menyimpan isinya di bawah folder tujuan, bukan di bawah
+// shortcut itu sendiri. Semua pembacaan isi folder harus lewat sini, kalau
+// tidak isi shortcut terlihat kosong di halaman yang tidak kenal target_id.
+export function idIsi(item: ItemDrive): string {
+  return item.targetId ?? item.id
+}
+
+// Anak sebuah folder, termasuk isi folder yang disimpan di bawah folder
+// tujuan sebuah shortcut.
+export function anakDari(items: ItemDrive[], folder: ItemDrive): ItemDrive[] {
+  return items.filter((i) => i.indukId === idIsi(folder))
+}
+
 // Jumlah seluruh keturunan tiap folder (bukan hanya anak langsung). Dipakai
 // halaman publik untuk menuliskan "5 subfolder, 118 berkas" — angka yang
 // berguna bagi pembaca, bukan sekadar isi satu lapis.
@@ -91,7 +104,7 @@ export function hitungKeturunan(
 
     let folder = 0
     let berkas = 0
-    const tumpuk = [...(anak.get(item.id) ?? [])]
+    const tumpuk = [...(anak.get(idIsi(item)) ?? [])]
     const dilihat = new Set<string>([item.id])
 
     while (tumpuk.length > 0) {
@@ -100,7 +113,7 @@ export function hitungKeturunan(
       dilihat.add(sekarang.id)
       if (sekarang.folder) {
         folder += 1
-        tumpuk.push(...(anak.get(sekarang.id) ?? []))
+        tumpuk.push(...(anak.get(idIsi(sekarang)) ?? []))
       } else {
         berkas += 1
       }

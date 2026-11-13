@@ -22,7 +22,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
-import { ambilSemuaItem, hitungKeturunan, jalurKe, type ItemDrive } from "@/lib/data"
+import { ambilSemuaItem, anakDari, hitungKeturunan, jalurKe, type ItemDrive } from "@/lib/data"
 
 export const dynamic = "force-dynamic"
 
@@ -68,8 +68,7 @@ export default async function HalamanArsipPublik({
 
   // Shortcut ke folder: isinya diambil dari folder tujuan (target_id),
   // karena isi aslinya disimpan sekali di bawah folder tujuan itu.
-  const idIsi = folder.targetId ?? folder.id
-  const anak = items.filter((i) => i.indukId === idIsi)
+  const anak = anakDari(items, folder)
   const subfolder = anak.filter((i) => i.folder)
   const berkas = anak.filter((i) => !i.folder)
   // Folder akar ("PKKS 2026") tidak ditampilkan di remah roti. Pembaca datang
@@ -186,7 +185,7 @@ export default async function HalamanArsipPublik({
                     key={sub.id}
                     item={sub}
                     jumlahBerkas={keturunan.get(sub.id)?.berkas ?? 0}
-                    subfolder={items.filter((i) => i.folder && i.indukId === sub.id)}
+                    subfolder={anakDari(items, sub).filter((i) => i.folder)}
                   />
                 ))}
               </div>

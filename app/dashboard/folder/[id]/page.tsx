@@ -13,7 +13,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
-import { ambilSemuaItem, jalurKe, type ItemDrive } from "@/lib/data"
+import { ambilSemuaItem, anakDari, idIsi, jalurKe, type ItemDrive } from "@/lib/data"
 
 export const dynamic = "force-dynamic"
 
@@ -38,8 +38,7 @@ export default async function HalamanFolder({
 
   // Shortcut ke folder: isinya diambil dari folder tujuan (target_id),
   // karena isi aslinya disimpan sekali di bawah folder tujuan itu.
-  const idIsi = folder.targetId ?? folder.id
-  const anak = items.filter((i) => i.indukId === idIsi)
+  const anak = anakDari(items, folder)
   const subfolder = anak.filter((i) => i.folder)
   const berkas = anak.filter((i) => !i.folder)
   // Sama seperti halaman publik: folder akar ("PKKS 2026") tidak ditampilkan
@@ -117,7 +116,7 @@ export default async function HalamanFolder({
               <KartuFolder
                 key={sub.id}
                 item={sub}
-                isi={jumlahAnak.get(sub.id) ?? { folder: 0, berkas: 0 }}
+                isi={jumlahAnak.get(idIsi(sub)) ?? { folder: 0, berkas: 0 }}
               />
             ))}
           </div>
